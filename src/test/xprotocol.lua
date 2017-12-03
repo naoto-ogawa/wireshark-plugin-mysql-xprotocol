@@ -23,10 +23,24 @@ f.payload   = ProtoField.bytes  ("XProtocol.payload"   , "Payload" )
 
 function getMessageParts (offset, tvb)
   -- size
+  local msg_size = tvb(offset, 4)
+  local payload_len = msg_size :le_int() - 1
+  offset = offset + 4
   -- type
+  local msg_type = tvb(offset, 1)
+  local msg_type_num = msg_type :int() 
+  offset = offset + 1
   -- payload
+  info (string.format("tvb_len=%d, offset=%d, payload_len=%d", tvb:len(), offset, payload_len))
+  local msg_payload = (offset + payload_len <= tvb:len()) and tvb(offset, payload_len) or nil
+  offset = offset + payload_len
+  return offset, msg_size, payload_len, msg_type, msg_type_num, msg_payload
 end
 
+-- 0123456789  ---- len = 10
+-- ++++        0 4 
+--     +       4 1
+--      +++++  5 5
 
 function xproto.dissector (tvb, pinfo, tree) -- testy vertual tvbfer
   pinfo.cols.protocol = "XPROTO"
@@ -42,43 +56,20 @@ function xproto.dissector (tvb, pinfo, tree) -- testy vertual tvbfer
 
   -- 1st message
   messages = subtree:add (f.message, tvb(offset,5)) 
-  -- size
-  local msg_size = tvb(offset, 4)
-  local payload_len = msg_size :le_int() - 1
+  
+  offset, msg_size, payload_len, msg_type, msg_type_num, msg_payload = getMessageParts (offset, tvb)
   messages:add (f.size, msg_size) :append_text (string.format(" msg_len (%d) : payload_len (%d)", payload_len+1, payload_len))
-  offset = offset + 4
-
-  -- type
-  local msg_type = tvb(offset, 1)
-  local msg_type_num = tonumber(tostring(msg_type()),16)
   messages:add (f.tipe, msg_type) :append_text (string.format(" (%d)", msg_type_num))
-  offset = offset + 1
-
-  -- payload
-  local msg_payload = tvb(offset, payload_len)
-  messages:add (f.payload, msg_payload)
-  offset = offset + payload_len
+  if msg_payload then messages:add (f.payload, msg_payload) end
 
   -- 2nd message
   messages = subtree:add (f.message, tvb(offset,5)) 
-  -- size
-  local msg_size = tvb(offset, 4)
-  local payload_len = msg_size :le_int() - 1
+  
+  offset, msg_size, payload_len, msg_type, msg_type_num, msg_payload = getMessageParts (offset, tvb)
   messages:add (f.size, msg_size) :append_text (string.format(" msg_len (%d) : payload_len (%d)", payload_len+1, payload_len))
-  offset = offset + 4
-
-  -- type
-  local msg_type = tvb(offset, 1)
-  local msg_type_num = tonumber(tostring(msg_type()),16)
   messages:add (f.tipe, msg_type) :append_text (string.format(" (%d)", msg_type_num))
-  offset = offset + 1
+  if msg_payload then messages:add (f.payload, msg_payload) end
 
-  -- payload
-  local msg_payload = tvb(offset, payload_len)
-  messages:add (f.payload, msg_payload)
-  offset = offset + payload_len
-
-  -- info("msg_size=" .. msg_size) 
 end
 
 DissectorTable.get("tcp.port"):add(8000,xproto)
