@@ -16,9 +16,17 @@ p.server_port = Pref.uint ("server port", 8000, "server port number") -- TODO 33
 local f = xproto.fields
 
 -- f.direction = ProtoField.bytes  ( "XProtocol.direction" , "Direction" )
-f.size      = ProtoField.bytes  ("XProtocol.size"      , "Size"   )
-f.tipe      = ProtoField.bytes  ("XProtocol.type"      , "Type"   )
-f.payload   = ProtoField.bytes  ("XProtocol.payload"   , "Payload")
+f.message   = ProtoField.bytes  ("XProtocol.message"   , "Message" )
+f.size      = ProtoField.bytes  ("XProtocol.size"      , "Size"    )
+f.tipe      = ProtoField.bytes  ("XProtocol.type"      , "Type"    )
+f.payload   = ProtoField.bytes  ("XProtocol.payload"   , "Payload" )
+
+function getMessageParts (offset, tvb)
+  -- size
+  -- type
+  -- payload
+end
+
 
 function xproto.dissector (tvb, pinfo, tree) -- testy vertual tvbfer
   pinfo.cols.protocol = "XPROTO"
@@ -30,16 +38,51 @@ function xproto.dissector (tvb, pinfo, tree) -- testy vertual tvbfer
   local direction = (pinfo.src_port == p.server_port) and true or false                        -- TODO port should be retrieve from user pref.
   subtree:append_text (direction and " server -> client " or " client -> server ")
 
-  -- size
-  local msg_size = tvb(0, 4)
-  subtree:add (f.size, msg_size)
-  -- type
-  local msg_type = tvb(4, 1)
-  subtree:add (f.tipe, msg_type)
-  -- payload
+  local offset = 0
 
+  -- 1st message
+  messages = subtree:add (f.message, tvb(offset,5)) 
+  -- size
+  local msg_size = tvb(offset, 4)
+  local payload_len = msg_size :le_int() - 1
+  messages:add (f.size, msg_size) :append_text (string.format(" msg_len (%d) : payload_len (%d)", payload_len+1, payload_len))
+  offset = offset + 4
+
+  -- type
+  local msg_type = tvb(offset, 1)
+  local msg_type_num = tonumber(tostring(msg_type()),16)
+  messages:add (f.tipe, msg_type) :append_text (string.format(" (%d)", msg_type_num))
+  offset = offset + 1
+
+  -- payload
+  local msg_payload = tvb(offset, payload_len)
+  messages:add (f.payload, msg_payload)
+  offset = offset + payload_len
+
+  -- 2nd message
+  messages = subtree:add (f.message, tvb(offset,5)) 
+  -- size
+  local msg_size = tvb(offset, 4)
+  local payload_len = msg_size :le_int() - 1
+  messages:add (f.size, msg_size) :append_text (string.format(" msg_len (%d) : payload_len (%d)", payload_len+1, payload_len))
+  offset = offset + 4
+
+  -- type
+  local msg_type = tvb(offset, 1)
+  local msg_type_num = tonumber(tostring(msg_type()),16)
+  messages:add (f.tipe, msg_type) :append_text (string.format(" (%d)", msg_type_num))
+  offset = offset + 1
+
+  -- payload
+  local msg_payload = tvb(offset, payload_len)
+  messages:add (f.payload, msg_payload)
+  offset = offset + payload_len
 
   -- info("msg_size=" .. msg_size) 
 end
 
 DissectorTable.get("tcp.port"):add(8000,xproto)
+
+
+
+
