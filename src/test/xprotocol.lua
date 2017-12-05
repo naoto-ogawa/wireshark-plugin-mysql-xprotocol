@@ -28,6 +28,43 @@ state = {
   , msg_payload  = nil
 }
 
+--
+clientmessagetype = {
+   [1]  = "CON_CAPABILITIES_GET"
+  ,[2]  = "CON_CAPABILITIES_SET"
+  ,[3]  = "CON_CLOSE"
+  ,[4]  = "SESS_AUTHENTICATE_START"
+  ,[5]  = "SESS_AUTHENTICATE_CONTINUE"
+  ,[6]  = "SESS_RESET"
+  ,[7]  = "SESS_CLOSE"
+  ,[12] = "SQL_STMT_EXECUTE"
+  ,[17] = "CRUD_FIND"
+  ,[18] = "CRUD_INSERT"
+  ,[19] = "CRUD_UPDATE"
+  ,[20] = "CRUD_DELETE"
+  ,[24] = "EXPECT_OPEN"
+  ,[25] = "EXPECT_CLOSE"
+  ,[30] = "CRUD_CREATE_VIEW"
+  ,[31] = "CRUD_MODIFY_VIEW"
+  ,[32] = "CRUD_DROP_VIEW"
+}
+--
+servermessagetype = {
+   [0]  = "OK"
+  ,[1]  = "ERROR"
+  ,[2]  = "CONN_CAPABILITIES"
+  ,[3]  = "SESS_AUTHENTICATE_CONTINUE"
+  ,[4]  = "SESS_AUTHENTICATE_OK"
+  ,[11] = "NOTICE"
+  ,[12] = "RESULTSET_COLUMN_META_DATA"
+  ,[13] = "RESULTSET_ROW"
+  ,[14] = "RESULTSET_FETCH_DONE"
+  ,[15] = "RESULTSET_FETCH_SUSPENDED"
+  ,[16] = "RESULTSET_FETCH_DONE_MORE_RESULTSETS"
+  ,[17] = "SQL_STMT_EXECUTE_OK"
+  ,[18] = "RESULTSET_FETCH_DONE_MORE_OUT_PARAMS"
+}
+
 
 
 function getMessageParts (offset, tvb)
@@ -103,6 +140,7 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
       messages 
         :add (f.tipe, msg_type) 
         :append_text (string.format(" (%d) ", msg_type_num))
+        :append_text (tostring(direction and servermessagetype[msg_type_num] or clientmessagetype[msg_type_num]))
     end
     if msg_payload then 
       messages:add (f.payload, msg_payload) 
