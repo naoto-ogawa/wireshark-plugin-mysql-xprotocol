@@ -18,10 +18,11 @@ p.server_port = Pref.uint ("server port", 8000, "server port number") -- TODO 33
 -- Fields
 local f = xproto.fields
 
-f.message   = ProtoField.bytes  ("XProtocol.message"   , "Message" )
-f.size      = ProtoField.bytes  ("XProtocol.size"      , "Size"    )
-f.tipe      = ProtoField.bytes  ("XProtocol.type"      , "Type"    )
-f.payload   = ProtoField.bytes  ("XProtocol.payload"   , "Payload" )
+f.message   = ProtoField.bytes  ("XProtocol.message"   , "Message"    )
+f.size      = ProtoField.bytes  ("XProtocol.size"      , "Size"       )
+f.tipe      = ProtoField.bytes  ("XProtocol.type"      , "Type"       )
+f.payload   = ProtoField.bytes  ("XProtocol.payload"   , "Payload"    )
+f.pbitem    = ProtoField.bytes  ("XProtocol.pbitem"    , "proto item" )
 
 -- state between packets -- TODO not good state management, we need to consider each item is divided between packet.
 state = {
@@ -29,6 +30,21 @@ state = {
   , msg_type_num = nil
   , msg_payload  = nil
 }
+
+columnmetadata = {
+    [1]  = {type = "FieldType", name = "type"             , tag=1  }
+  , [2]  = {type = "bytes",     name = "name"             , tag=2  }
+  , [3]  = {type = "bytes",     name = "original_name"    , tag=3  }
+  , [4]  = {type = "bytes",     name = "table"            , tag=4  }
+  , [5]  = {type = "bytes",     name = "original_table"   , tag=5  }
+  , [6]  = {type = "bytes",     name = "schema"           , tag=6  }
+  , [7]  = {type = "bytes",     name = "catalog"          , tag=7  }
+  , [8]  = {type = "uint64",    name = "collation"        , tag=8  }
+  , [9]  = {type = "uint32",    name = "fractional_digits", tag=9  }
+  , [10] = {type = "uint32",    name = "length"           , tag=10 }
+  , [11] = {type = "uint32",    name = "flags"            , tag=11 }
+  , [12] = {type = "uint32",    name = "content_type"     , tag=12 }
+} 
 
 --
 clientmessagetype = {
@@ -52,22 +68,46 @@ clientmessagetype = {
 }
 --
 servermessagetype = {
-   [0]  = "OK"
-  ,[1]  = "ERROR"
-  ,[2]  = "CONN_CAPABILITIES"
-  ,[3]  = "SESS_AUTHENTICATE_CONTINUE"
-  ,[4]  = "SESS_AUTHENTICATE_OK"
-  ,[11] = "NOTICE"
-  ,[12] = "RESULTSET_COLUMN_META_DATA"
-  ,[13] = "RESULTSET_ROW"
-  ,[14] = "RESULTSET_FETCH_DONE"
-  ,[15] = "RESULTSET_FETCH_SUSPENDED"
-  ,[16] = "RESULTSET_FETCH_DONE_MORE_RESULTSETS"
-  ,[17] = "SQL_STMT_EXECUTE_OK"
-  ,[18] = "RESULTSET_FETCH_DONE_MORE_OUT_PARAMS"
-}
+   [0]  = {name = "OK" , definition = nil  }
+  ,[1]  = {name = "ERROR" , definition = nil  }
+  ,[2]  = {name = "CONN_CAPABILITIES" , definition = nil  }
+  ,[3]  = {name = "SESS_AUTHENTICATE_CONTINUE" , definition = nil  }
+  ,[4]  = {name = "SESS_AUTHENTICATE_OK" , definition = nil  }
+  ,[11] = {name = "NOTICE" , definition = nil  }
+  ,[12] = {name = "RESULTSET_COLUMN_META_DATA" , definition = nil  }
+  ,[13] = {name = "RESULTSET_ROW" , definition = columnmetadata  }
+  ,[14] = {name = "RESULTSET_FETCH_DONE" , definition = nil  }
+  ,[15] = {name = "RESULTSET_FETCH_SUSPENDED" , definition = nil  }
+  ,[16] = {name = "RESULTSET_FETCH_DONE_MORE_RESULTSETS" , definition = nil  }
+  ,[17] = {name = "SQL_STMT_EXECUTE_OK" , definition = nil  }
+  ,[18] = {name = "RESULTSET_FETCH_DONE_MORE_OUT_PARAMS" , definition = nil  }
+} 
+
+function register_proto_field(def_tbl) 
+  for key,value in pairs(columnmetadata) do 
+     local nm = columnmetadata[key].name
+     ff = ProtoField.new ("xprotocol." .. nm, nm, ftypes.BYTES)
+     f[columnmetadata[key].name] = ff
+     columnmetadata[key]["protofield"] = ff
+  end 
+end
+
+register_proto_field(columnmetadata)
+
+function get_proto_field(server_or_client, msg_type_no, tag_no) 
+  info(server_or_client)
+  local msgtbl = server_or_client and servermessagetype or clientmessagetype 
+  if msgtbl == nil then
+    return f.pbitem
+  end
+  local proto_field = msgtbl[msg_type_no][tag_no]["protofield"]
+  return proto_field and proto_field or f.pbitem
+end
 
 
+--
+--
+--
 
 function getMessageParts (offset, tvb)
   -- size
@@ -113,6 +153,9 @@ function getMessageParts (offset, tvb)
   return offset, msg_size, payload_len, msg_type, msg_type_num, msg_payload
 end
 
+--
+-- dissector
+--
 function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
   pinfo.cols.protocol = "XPROTO"
   packet_cnt = packet_cnt + 1
@@ -121,7 +164,6 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
 
   local direction = (pinfo.src_port == p.server_port) and true or false
   subtree:append_text (direction and " server -> client " or " client -> server ")
-  -- info (direction and " server -> client " or " client -> server ")
 
   local offset = 0
   local msg_size, payload_len, msg_type, msg_type_num, msg_payload
@@ -131,30 +173,43 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
     offset, msg_size, payload_len, msg_type, msg_type_num, msg_payload = getMessageParts (offset, tvb)
     -- info (string.format("**payload_len=%d, msg_type_num=%d, msg_payload=%s", payload_len, msg_type_num, msg_payload))
     if msg_size then
-      messages:add (f.size, msg_size) :append_text (string.format(" msg_len (%d) : payload_len (%d)", payload_len+1, payload_len))
+      messages
+        :add (f.size, msg_size) 
+        :append_text (string.format(" msg_len (%d) : payload_len (%d)", payload_len+1, payload_len))
     end
     if msg_type then
       messages 
         :add (f.tipe, msg_type) 
         :append_text (string.format(" (%d) ", msg_type_num))
-        :append_text (tostring(direction and servermessagetype[msg_type_num] or clientmessagetype[msg_type_num]))
+        :append_text (tostring(direction and servermessagetype[msg_type_num].name or clientmessagetype[msg_type_num]))
     end
     if msg_payload then 
       payload = messages:add (f.payload, msg_payload) 
-      payload :add (string.format(" length (%d)", msg_payload:len()))
+      payload:append_text (string.format(" length (%d)", msg_payload:len()))
       if msg_payload :len() > 0 then
         po = 0
         while po < msg_payload :len() do
+          item_offset = po
           wiretype , tagno, po = getwiretag(po, msg_payload)
           if (wiretype == 0) then
-            val, acc, po = getLengthVal(po, msg_payload)
-            payload :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%d) acc (%d)", po, wiretype, tagno, val, acc))
+
+            val, acc, po, readsize = getLengthVal(po, msg_payload)
+           
+            ff = get_proto_field(direction, msg_type_num, tagno)
+           
+
+            item = payload:add(ff, msg_payload(item_offset, 1 + readsize))
+            item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%d) acc (%d)"
+                         , po, wiretype, tagno, val, acc))
 
           elseif (wiretype == 2) then
-            le, acc, po = getLengthVal(po, msg_payload)
+            le, acc, po, readsize = getLengthVal(po, msg_payload)
             va = msg_payload(po, acc) : string()
             po = po + acc
-            payload :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)", po, wiretype, tagno, le, acc, va))
+
+            item = payload:add(f.pbitem , msg_payload(item_offset, 1 + readsize + acc))
+            item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
+                         , po, wiretype, tagno, le, acc, va))
           end
         end
       end
@@ -163,23 +218,25 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
   end
 end
 
-function getLengthVal (offset, tvb) 
+function getLengthVal(offset, tvb) 
+  offsetstart = offset
   b = tvb(offset, 1)
   offset = offset + 1
-  acc1, base = getnumber(0, 1, b)
-  -- info(string.format("acc (%d), (%d), base (%d), bitfield (%d)", b:uint(), acc1, base, b:bitfield(0,1)))
+  acc, base = getnumber(0, 1, b)
+  -- info(string.format("acc (%d), (%d), base (%d), bitfield (%d)", b:uint(), acc, base, b:bitfield(0,1)))
   -- info( b:bitfield(0,1) == 1)
   while b:bitfield(0,1) == 1 do
     b = tvb(offset, 1)
     offset = offset + 1
-    acc1, base = getnumber(acc1, base, b)
-    -- info(string.format("acc2 (%d), base (%d)", acc1, base))
+    acc, base = getnumber(acc, base, b)
+    -- info(string.format("acc2 (%d), base (%d)", acc, base))
   end
-  return b:uint(), acc1, offset
+  return b:uint(), acc, offset, (offset - offsetstart)
 end
 
+-- @param val value to be analyzed.
 function getnumber(acc, base, val) 
-  for i=7, 1, -1 do
+  for i=7, 1, -1 do                -- ignore MSB
     if val :bitfield(i,1) == 1 then
       acc = acc + (2^(base-1))
     end
@@ -196,23 +253,12 @@ function getwiretag(offset, tvb)
   return wire, tag, offset
 end
 
-function zigzag(tvb)
+function zigzag(tvb) -- TODO not working
   v = tvb :int()
   a = bit32.rshift(v,1)
   b = bit32.band  (v,1)
   return bit32.bxor(a, b * -1)  -- TODO bit
 end
-
--- -1
--- > print(bit32.band(1,127)*2 - 1)
--- 1
--- > print(bit32.band(2,127)*2 - 2)
--- 2
--- > print(bit32.band(3,127)*2 - 3)
--- 3
--- > print(bit32.band(255,127)*2 - 255)
--- -1
--- >
 
 -- state management
 function initState()
