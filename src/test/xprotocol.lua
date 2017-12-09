@@ -37,27 +37,27 @@ state = {
 
 -- mysql_connection.proto
 Capability = {
-  [1] = {attr = "required", type = "string", name = "name",  tag = 1}
- ,[2] = {attr = "required", type = "Any",    name = "Capability.value", tag = 2}
+  [1] = {attr = "required", type = "string" , name = "name"             , tag = 1}
+ ,[2] = {attr = "required", type = "Any"    , name = "Capability.value" , tag = 2}
 }
 Capabilities = {
-  [1] = {attr = "repeated", type = "Capability", name="capabilities", tag  = 1}
+  [1] = {attr = "repeated", type = "Capability" , name="capabilities", tag  = 1}
 }
 CapabilitiesGet = {
 }
 CapabilitiesSet = {
-  [1] = {attr = "repeated", type = "Capabilities", name="capabilities", tag  = 1}
+  [1] = {attr = "repeated", type = "Capabilities" , name="capabilities", tag  = 1}
 }
 close = {
 }
 -- mysql_datatypes.proto
 String = {
-   [1] = {attr = "required" , type = "bytes" , name="String.value" , tag = 1}
-  ,[2] = {attr = "optional" , type = "uint64", name="collation", tag = 2}
+   [1] = {attr = "required" , type = "bytes"  , name="String.value" , tag = 1}
+  ,[2] = {attr = "optional" , type = "uint64" , name="collation"    , tag = 2}
 }
 Octets = {
-   [1] = {attr = "required" , type = "bytes",  name = "value",        tag  = 1}
-  ,[2] = {attr = "optional" , type = "uint32", name = "content_type", tag  = 2}
+   [1] = {attr = "required" , type = "bytes"  , name = "value"        , tag = 1}
+  ,[2] = {attr = "optional" , type = "uint32" , name = "content_type" , tag = 2}
 }
 
 --  enum Type {
@@ -72,27 +72,27 @@ Octets = {
 --  };
 
 Scalar = {
-    [1] = {attr = "required" , type = "Type"   , name = "Scalar.type", tag   = 1}
-   ,[2] = {attr = "optional" , type = "sint64" , name = "v_signed_int", tag   = 2}
-   ,[3] = {attr = "optional" , type = "uint64" , name = "v_unsigned_int", tag   = 3}
-   ,[5] = {attr = "optional" , type = "Octets" , name = "v_octets", tag   = 5}
-   ,[6] = {attr = "optional" , type = "double" , name = "v_double", tag   = 6}
-   ,[7] = {attr = "optional" , type = "float"  , name = "v_float", tag   = 7}
-   ,[8] = {attr = "optional" , type = "bool"   , name = "v_bool", tag   = 8}
-   ,[9] = {attr = "optional" , type = "String" , name = "v_string", tag   = 9}
+    [1] = {attr = "required" , type = "Type"   , name = "Scalar.type"    , tag = 1}
+   ,[2] = {attr = "optional" , type = "sint64" , name = "v_signed_int"   , tag = 2}
+   ,[3] = {attr = "optional" , type = "uint64" , name = "v_unsigned_int" , tag = 3}
+   ,[5] = {attr = "optional" , type = "Octets" , name = "v_octets"       , tag = 5}
+   ,[6] = {attr = "optional" , type = "double" , name = "v_double"       , tag = 6}
+   ,[7] = {attr = "optional" , type = "float"  , name = "v_float"        , tag = 7}
+   ,[8] = {attr = "optional" , type = "bool"   , name = "v_bool"         , tag = 8}
+   ,[9] = {attr = "optional" , type = "String" , name = "v_string"       , tag = 9}
 }
 
 ObjectField = {
-   [1] = {attr = "required" , type = "string", name = "key", tag   = 1}
-  ,[2] = {attr = "required" , type = "Any", name = "value", tag   = 2}
+   [1] = {attr = "required" , type = "string", name = "key"   , tag = 1}
+  ,[2] = {attr = "required" , type = "Any"   , name = "value" , tag = 2}
 }
 
 Object = {
-  [1] = {attr = "repeated" , type = "ObjectField", name = "fld", tag   = 1}
+  [1] = {attr = "repeated" , type = "ObjectField", name = "fld", tag = 1}
 }
 
 Array = {
-  [1] = {attr = "repeated" , type = "Any", name = "value", tag   = 1}
+  [1] = {attr = "repeated" , type = "Any", name = "value", tag = 1}
 }
 
 Any = {
@@ -101,10 +101,10 @@ Any = {
 --     OBJECT = 2
 --     ARRAY  = 3
 --   }
-    [1] = {attr = "required" , type = "Type",   name = "Any.type",   tag = 1}
-  , [2] = {attr = "optional" , type = "Scalar", name = "scalar", tag = 2}
-  , [3] = {attr = "optional" , type = "Object", name = "obj",    tag = 3}
-  , [4] = {attr = "optional" , type = "Array",  name = "array",  tag = 4}
+    [1] = {attr = "required" , type = "Type"   , name = "Any.type" , tag = 1}
+  , [2] = {attr = "optional" , type = "Scalar" , name = "scalar"   , tag = 2}
+  , [3] = {attr = "optional" , type = "Object" , name = "obj"      , tag = 3}
+  , [4] = {attr = "optional" , type = "Array"  , name = "array"    , tag = 4}
 }
 
 --
@@ -129,50 +129,50 @@ message_table = {
   , CapabilitiesGet = CapabilitiesGet
   , CapabilitiesPut = CapabilitiesPut
   , ColumnMetaData  = ColumnMetaData 
-  , String = String
-  , Octets = Octets
-  , Scalar = Scalar
-  , ObjectField = ObjectField
-  , Object = Object
-  , Array = Array
-  , Any = Any
+  , String          = String
+  , Octets          = Octets
+  , Scalar          = Scalar
+  , ObjectField     = ObjectField
+  , Object          = Object
+  , Array           = Array
+  , Any             = Any
 }
 
 
 --
 clientmessagetype = {
-   [1]  = {name = "CON_CAPABILITIES_GET" , definition = CapabilitiesGet }
-  ,[2]  = {name = "CON_CAPABILITIES_SET" , definition = CapabilitiesSet }
-  ,[3]  = {name = "CON_CLOSE" , definition = nil }
-  ,[4]  = {name = "SESS_AUTHENTICATE_START" , definition = nil }
+   [1]  = {name = "CON_CAPABILITIES_GET"       , definition = CapabilitiesGet }
+  ,[2]  = {name = "CON_CAPABILITIES_SET"       , definition = CapabilitiesSet }
+  ,[3]  = {name = "CON_CLOSE"                  , definition = nil }
+  ,[4]  = {name = "SESS_AUTHENTICATE_START"    , definition = nil }
   ,[5]  = {name = "SESS_AUTHENTICATE_CONTINUE" , definition = nil }
-  ,[6]  = {name = "SESS_RESET" , definition = nil }
-  ,[7]  = {name = "SESS_CLOSE" , definition = nil }
-  ,[12] = {name = "SQL_STMT_EXECUTE" , definition = nil }
-  ,[17] = {name = "CRUD_FIND" , definition = nil }
-  ,[18] = {name = "CRUD_INSERT" , definition = nil }
-  ,[19] = {name = "CRUD_UPDATE" , definition = nil }
-  ,[20] = {name = "CRUD_DELETE" , definition = nil }
-  ,[24] = {name = "EXPECT_OPEN" , definition = nil }
-  ,[25] = {name = "EXPECT_CLOSE" , definition = nil }
-  ,[30] = {name = "CRUD_CREATE_VIEW" , definition = nil }
-  ,[31] = {name = "CRUD_MODIFY_VIEW" , definition = nil }
-  ,[32] = {name = "CRUD_DROP_VIEW" , definition = nil }
+  ,[6]  = {name = "SESS_RESET"                 , definition = nil }
+  ,[7]  = {name = "SESS_CLOSE"                 , definition = nil }
+  ,[12] = {name = "SQL_STMT_EXECUTE"           , definition = nil }
+  ,[17] = {name = "CRUD_FIND"                  , definition = nil }
+  ,[18] = {name = "CRUD_INSERT"                , definition = nil }
+  ,[19] = {name = "CRUD_UPDATE"                , definition = nil }
+  ,[20] = {name = "CRUD_DELETE"                , definition = nil }
+  ,[24] = {name = "EXPECT_OPEN"                , definition = nil }
+  ,[25] = {name = "EXPECT_CLOSE"               , definition = nil }
+  ,[30] = {name = "CRUD_CREATE_VIEW"           , definition = nil }
+  ,[31] = {name = "CRUD_MODIFY_VIEW"           , definition = nil }
+  ,[32] = {name = "CRUD_DROP_VIEW"             , definition = nil }
 }
 --
 servermessagetype = {
-   [0]  = {name = "OK" , definition = nil  }
-  ,[1]  = {name = "ERROR" , definition = nil  }
-  ,[2]  = {name = "CONN_CAPABILITIES" , definition = Capabilities }
-  ,[3]  = {name = "SESS_AUTHENTICATE_CONTINUE" , definition = nil  }
-  ,[4]  = {name = "SESS_AUTHENTICATE_OK" , definition = nil  }
-  ,[11] = {name = "NOTICE" , definition = nil  }
-  ,[12] = {name = "RESULTSET_COLUMN_META_DATA" , definition = ColumnMetaData }
-  ,[13] = {name = "RESULTSET_ROW" , definition = nil  }
-  ,[14] = {name = "RESULTSET_FETCH_DONE" , definition = nil  }
-  ,[15] = {name = "RESULTSET_FETCH_SUSPENDED" , definition = nil  }
+   [0]  = {name = "OK"                                   , definition = nil  }
+  ,[1]  = {name = "ERROR"                                , definition = nil  }
+  ,[2]  = {name = "CONN_CAPABILITIES"                    , definition = Capabilities }
+  ,[3]  = {name = "SESS_AUTHENTICATE_CONTINUE"           , definition = nil  }
+  ,[4]  = {name = "SESS_AUTHENTICATE_OK"                 , definition = nil  }
+  ,[11] = {name = "NOTICE"                               , definition = nil  }
+  ,[12] = {name = "RESULTSET_COLUMN_META_DATA"           , definition = ColumnMetaData }
+  ,[13] = {name = "RESULTSET_ROW"                        , definition = nil  }
+  ,[14] = {name = "RESULTSET_FETCH_DONE"                 , definition = nil  }
+  ,[15] = {name = "RESULTSET_FETCH_SUSPENDED"            , definition = nil  }
   ,[16] = {name = "RESULTSET_FETCH_DONE_MORE_RESULTSETS" , definition = nil  }
-  ,[17] = {name = "SQL_STMT_EXECUTE_OK" , definition = nil  }
+  ,[17] = {name = "SQL_STMT_EXECUTE_OK"                  , definition = nil  }
   ,[18] = {name = "RESULTSET_FETCH_DONE_MORE_OUT_PARAMS" , definition = nil  }
 } 
 
