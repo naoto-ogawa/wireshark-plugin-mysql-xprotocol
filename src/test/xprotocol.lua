@@ -31,25 +31,42 @@ state = {
   , msg_payload  = nil
 }
 
+-- mysql_connection.proto
+capability = {
+  [1] = {attr = "required", type = "string",               name = "name",  tag = 1}
+ ,[2] = {attr = "required", type = "Mysqlx.Datatypes.Any", name = "value", tag = 2}
+}
+capabilities = {
+  [1] = {attr = "repeated", type = "Capability", name="capabilities", tag  = 1}
+}
+capabilitiesget = {
+}
+capabilitiesset = {
+  [1] = {attr = "repeated", type = "Capabilities", name="capabilities", tag  = 1}
+}
+close = {
+}
+
+
 columnmetadata = {
-    [1]  = {type = "FieldType", name = "type"             , tag=1  }
-  , [2]  = {type = "bytes",     name = "name"             , tag=2  }
-  , [3]  = {type = "bytes",     name = "original_name"    , tag=3  }
-  , [4]  = {type = "bytes",     name = "table"            , tag=4  }
-  , [5]  = {type = "bytes",     name = "original_table"   , tag=5  }
-  , [6]  = {type = "bytes",     name = "schema"           , tag=6  }
-  , [7]  = {type = "bytes",     name = "catalog"          , tag=7  }
-  , [8]  = {type = "uint64",    name = "collation"        , tag=8  }
-  , [9]  = {type = "uint32",    name = "fractional_digits", tag=9  }
-  , [10] = {type = "uint32",    name = "length"           , tag=10 }
-  , [11] = {type = "uint32",    name = "flags"            , tag=11 }
-  , [12] = {type = "uint32",    name = "content_type"     , tag=12 }
+    [1]  = {type = "FieldType", name = "type"             , tag=1 }
+  , [2]  = {type = "bytes",     name = "name"             , tag=2 }
+  , [3]  = {type = "bytes",     name = "original_name"    , tag=3 }
+  , [4]  = {type = "bytes",     name = "table"            , tag=4 }
+  , [5]  = {type = "bytes",     name = "original_table"   , tag=5 }
+  , [6]  = {type = "bytes",     name = "schema"           , tag=6 }
+  , [7]  = {type = "bytes",     name = "catalog"          , tag=7 }
+  , [8]  = {type = "uint64",    name = "collation"        , tag=8 }
+  , [9]  = {type = "uint32",    name = "fractional_digits", tag=9 }
+  , [10] = {type = "uint32",    name = "length"           , tag=10}
+  , [11] = {type = "uint32",    name = "flags"            , tag=11}
+  , [12] = {type = "uint32",    name = "content_type"     , tag=12}
 } 
 
 --
 clientmessagetype = {
-   [1]  = {name = "CON_CAPABILITIES_GET" , definition = nil }
-  ,[2]  = {name = "CON_CAPABILITIES_SET" , definition = nil }
+   [1]  = {name = "CON_CAPABILITIES_GET" , definition = capabilitiesget }
+  ,[2]  = {name = "CON_CAPABILITIES_SET" , definition = capabilitiesset }
   ,[3]  = {name = "CON_CLOSE" , definition = nil }
   ,[4]  = {name = "SESS_AUTHENTICATE_START" , definition = nil }
   ,[5]  = {name = "SESS_AUTHENTICATE_CONTINUE" , definition = nil }
@@ -70,7 +87,7 @@ clientmessagetype = {
 servermessagetype = {
    [0]  = {name = "OK" , definition = nil  }
   ,[1]  = {name = "ERROR" , definition = nil  }
-  ,[2]  = {name = "CONN_CAPABILITIES" , definition = nil  }
+  ,[2]  = {name = "CONN_CAPABILITIES" , definition = capabilities }
   ,[3]  = {name = "SESS_AUTHENTICATE_CONTINUE" , definition = nil  }
   ,[4]  = {name = "SESS_AUTHENTICATE_OK" , definition = nil  }
   ,[11] = {name = "NOTICE" , definition = nil  }
@@ -84,28 +101,37 @@ servermessagetype = {
 } 
 
 function register_proto_field(def_tbl) 
-  for key,value in pairs(columnmetadata) do 
-     local nm = columnmetadata[key].name
+  for key,value in pairs(def_tbl) do 
+     local nm = def_tbl[key].name
      ff = ProtoField.new ("xprotocol." .. nm, nm, ftypes.BYTES)
-     f[columnmetadata[key].name] = ff
-     columnmetadata[key]["protofield"] = ff
+     f[def_tbl[key].name] = ff
+     def_tbl[key]["protofield"] = ff
   end 
 end
 
 register_proto_field(columnmetadata)
+register_proto_field(capabilitiesget)
+register_proto_field(capabilitiesset)
+register_proto_field(capabilities)
 
 function get_proto_field(server_or_client, msg_type_no, tag_no) 
-  -- info(string.format("[%s] msg_type_no(%d) tag_no(%d)",(server_or_client and "s-c" or "c->s"), msg_type_no, tag_no))
+  info(string.format("[%s] msg_type_no(%d) tag_no(%d)",(server_or_client and "s-c" or "c->s"), msg_type_no, tag_no))
   local msgtbl = server_or_client and servermessagetype or clientmessagetype 
   if msgtbl == nil then
+    info("no msgtbl")
     return f.pbitem
   end
   local msg_tbl_item = msgtbl[msg_type_no]["definition"]
   if msg_tbl_item == nil then
+    info("no definition")
     return f.pbitem
   end
   local proto_field = msg_tbl_item[tag_no]["protofield"]
-  return proto_field and proto_field or f.pbitem
+  if proto_field == nil then
+    info("no protofield")
+    return f.pbitem
+  end
+  return proto_field 
 end
 
 function get_message_name(server_or_client, msg_type_num)
@@ -160,6 +186,10 @@ function getMessageParts (offset, tvb)
   return offset, msg_size, payload_len, msg_type, msg_type_num, msg_payload
 end
 
+info ("================================================================")
+info (" start" )
+info ("================================================================")
+
 --
 -- dissector
 --
@@ -185,11 +215,11 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
         :append_text (string.format(" msg_len (%d) : payload_len (%d)", payload_len+1, payload_len))
     end
     if msg_type then
+      messages :append_text ("  " .. get_message_name(direction, msg_type_num))
       messages 
         :add (f.tipe, msg_type) 
         :append_text (string.format(" (%d) ", msg_type_num))
         :append_text (get_message_name(direction, msg_type_num))
-      messages :append_text ("  " .. get_message_name(direction, msg_type_num))
     end
     if msg_payload then 
       payload = messages:add (f.payload, msg_payload) 
@@ -200,12 +230,9 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
           item_offset = po
           wiretype , tagno, po = getwiretag(po, msg_payload)
           if (wiretype == 0) then
-
             val, acc, po, readsize = getLengthVal(po, msg_payload)
            
             ff = get_proto_field(direction, msg_type_num, tagno)
-           
-
             item = payload:add(ff, msg_payload(item_offset, 1 + readsize))
             item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%d) acc (%d)"
                          , po, wiretype, tagno, val, acc))
@@ -215,7 +242,8 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
             va = msg_payload(po, acc) : string()
             po = po + acc
 
-            item = payload:add(f.pbitem , msg_payload(item_offset, 1 + readsize + acc))
+            ff = get_proto_field(direction, msg_type_num, tagno)
+            item = payload:add(ff , msg_payload(item_offset, 1 + readsize + acc))
             item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
                          , po, wiretype, tagno, le, acc, va))
           end
