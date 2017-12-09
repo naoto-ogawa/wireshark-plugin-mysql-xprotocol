@@ -48,23 +48,23 @@ columnmetadata = {
 
 --
 clientmessagetype = {
-   [1]  = "CON_CAPABILITIES_GET"
-  ,[2]  = "CON_CAPABILITIES_SET"
-  ,[3]  = "CON_CLOSE"
-  ,[4]  = "SESS_AUTHENTICATE_START"
-  ,[5]  = "SESS_AUTHENTICATE_CONTINUE"
-  ,[6]  = "SESS_RESET"
-  ,[7]  = "SESS_CLOSE"
-  ,[12] = "SQL_STMT_EXECUTE"
-  ,[17] = "CRUD_FIND"
-  ,[18] = "CRUD_INSERT"
-  ,[19] = "CRUD_UPDATE"
-  ,[20] = "CRUD_DELETE"
-  ,[24] = "EXPECT_OPEN"
-  ,[25] = "EXPECT_CLOSE"
-  ,[30] = "CRUD_CREATE_VIEW"
-  ,[31] = "CRUD_MODIFY_VIEW"
-  ,[32] = "CRUD_DROP_VIEW"
+   [1]  = {name = "CON_CAPABILITIES_GET" , definition = nil }
+  ,[2]  = {name = "CON_CAPABILITIES_SET" , definition = nil }
+  ,[3]  = {name = "CON_CLOSE" , definition = nil }
+  ,[4]  = {name = "SESS_AUTHENTICATE_START" , definition = nil }
+  ,[5]  = {name = "SESS_AUTHENTICATE_CONTINUE" , definition = nil }
+  ,[6]  = {name = "SESS_RESET" , definition = nil }
+  ,[7]  = {name = "SESS_CLOSE" , definition = nil }
+  ,[12] = {name = "SQL_STMT_EXECUTE" , definition = nil }
+  ,[17] = {name = "CRUD_FIND" , definition = nil }
+  ,[18] = {name = "CRUD_INSERT" , definition = nil }
+  ,[19] = {name = "CRUD_UPDATE" , definition = nil }
+  ,[20] = {name = "CRUD_DELETE" , definition = nil }
+  ,[24] = {name = "EXPECT_OPEN" , definition = nil }
+  ,[25] = {name = "EXPECT_CLOSE" , definition = nil }
+  ,[30] = {name = "CRUD_CREATE_VIEW" , definition = nil }
+  ,[31] = {name = "CRUD_MODIFY_VIEW" , definition = nil }
+  ,[32] = {name = "CRUD_DROP_VIEW" , definition = nil }
 }
 --
 servermessagetype = {
@@ -74,8 +74,8 @@ servermessagetype = {
   ,[3]  = {name = "SESS_AUTHENTICATE_CONTINUE" , definition = nil  }
   ,[4]  = {name = "SESS_AUTHENTICATE_OK" , definition = nil  }
   ,[11] = {name = "NOTICE" , definition = nil  }
-  ,[12] = {name = "RESULTSET_COLUMN_META_DATA" , definition = nil  }
-  ,[13] = {name = "RESULTSET_ROW" , definition = columnmetadata  }
+  ,[12] = {name = "RESULTSET_COLUMN_META_DATA" , definition = columnmetadata }
+  ,[13] = {name = "RESULTSET_ROW" , definition = nil  }
   ,[14] = {name = "RESULTSET_FETCH_DONE" , definition = nil  }
   ,[15] = {name = "RESULTSET_FETCH_SUSPENDED" , definition = nil  }
   ,[16] = {name = "RESULTSET_FETCH_DONE_MORE_RESULTSETS" , definition = nil  }
@@ -95,15 +95,22 @@ end
 register_proto_field(columnmetadata)
 
 function get_proto_field(server_or_client, msg_type_no, tag_no) 
-  info(server_or_client)
+  -- info(string.format("[%s] msg_type_no(%d) tag_no(%d)",(server_or_client and "s-c" or "c->s"), msg_type_no, tag_no))
   local msgtbl = server_or_client and servermessagetype or clientmessagetype 
   if msgtbl == nil then
     return f.pbitem
   end
-  local proto_field = msgtbl[msg_type_no][tag_no]["protofield"]
+  local msg_tbl_item = msgtbl[msg_type_no]["definition"]
+  if msg_tbl_item == nil then
+    return f.pbitem
+  end
+  local proto_field = msg_tbl_item[tag_no]["protofield"]
   return proto_field and proto_field or f.pbitem
 end
 
+function get_message_name(server_or_client, msg_type_num)
+  return (tostring(server_or_client and servermessagetype[msg_type_num].name or clientmessagetype[msg_type_num].name))
+end
 
 --
 --
@@ -181,7 +188,8 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
       messages 
         :add (f.tipe, msg_type) 
         :append_text (string.format(" (%d) ", msg_type_num))
-        :append_text (tostring(direction and servermessagetype[msg_type_num].name or clientmessagetype[msg_type_num]))
+        :append_text (get_message_name(direction, msg_type_num))
+      messages :append_text ("  " .. get_message_name(direction, msg_type_num))
     end
     if msg_payload then 
       payload = messages:add (f.payload, msg_payload) 
