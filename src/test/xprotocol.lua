@@ -37,8 +37,8 @@ state = {
 
 -- mysql_connection.proto
 Capability = {
-  [1] = {attr = "required", type = "string",               name = "name",  tag = 1}
- ,[2] = {attr = "required", type = "Mysqlx.Datatypes.Any", name = "value", tag = 2}
+  [1] = {attr = "required", type = "string", name = "name",  tag = 1}
+ ,[2] = {attr = "required", type = "Any",    name = "Capability.value", tag = 2}
 }
 Capabilities = {
   [1] = {attr = "repeated", type = "Capability", name="capabilities", tag  = 1}
@@ -52,7 +52,7 @@ close = {
 }
 -- mysql_datatypes.proto
 String = {
-   [1] = {attr = "required" , type = "bytes" , name="value" , tag = 1}
+   [1] = {attr = "required" , type = "bytes" , name="String.value" , tag = 1}
   ,[2] = {attr = "optional" , type = "uint64", name="collation", tag = 2}
 }
 Octets = {
@@ -72,14 +72,14 @@ Octets = {
 --  };
 
 Scalar = {
-    [1] = {attr = "required" , type = "Type", name = "type", tag   = 1}
-   ,[2] = {attr = "optional" , type = "sint64", name = "v_signed_int", tag   = 2}
-   ,[3] = {attr = "optional" , type = "uint64", name = "v_unsigned_int", tag   = 3}
-   ,[5] = {attr = "optional" , type = "Octets", name = "v_octets", tag   = 5}
-   ,[6] = {attr = "optional" , type = "double", name = "v_double", tag   = 6}
-   ,[7] = {attr = "optional" , type = "float", name = "v_float", tag   = 7}
-   ,[8] = {attr = "optional" , type = "bool", name = "v_bool", tag   = 8}
-   ,[9] = {attr = "optional" , type = "String", name = "v_string", tag   = 9}
+    [1] = {attr = "required" , type = "Type"   , name = "Scalar.type", tag   = 1}
+   ,[2] = {attr = "optional" , type = "sint64" , name = "v_signed_int", tag   = 2}
+   ,[3] = {attr = "optional" , type = "uint64" , name = "v_unsigned_int", tag   = 3}
+   ,[5] = {attr = "optional" , type = "Octets" , name = "v_octets", tag   = 5}
+   ,[6] = {attr = "optional" , type = "double" , name = "v_double", tag   = 6}
+   ,[7] = {attr = "optional" , type = "float"  , name = "v_float", tag   = 7}
+   ,[8] = {attr = "optional" , type = "bool"   , name = "v_bool", tag   = 8}
+   ,[9] = {attr = "optional" , type = "String" , name = "v_string", tag   = 9}
 }
 
 ObjectField = {
@@ -101,7 +101,7 @@ Any = {
 --     OBJECT = 2
 --     ARRAY  = 3
 --   }
-    [1] = {attr = "required" , type = "Type",   name = "type",   tag = 1}
+    [1] = {attr = "required" , type = "Type",   name = "Any.type",   tag = 1}
   , [2] = {attr = "optional" , type = "Scalar", name = "scalar", tag = 2}
   , [3] = {attr = "optional" , type = "Object", name = "obj",    tag = 3}
   , [4] = {attr = "optional" , type = "Array",  name = "array",  tag = 4}
@@ -179,7 +179,7 @@ servermessagetype = {
 function register_proto_field(def_tbl) 
   for key,value in pairs(def_tbl) do 
      local nm = def_tbl[key].name
-     ff = ProtoField.new ("xprotocol." .. nm, nm, ftypes.BYTES)
+     ff = ProtoField.new ("x." .. nm, nm, ftypes.BYTES)
      f[def_tbl[key].name] = ff
      def_tbl[key]["protofield"] = ff
   end 
@@ -190,6 +190,7 @@ register_proto_field(ColumnMetaData)
 register_proto_field(CapabilitiesGet)
 register_proto_field(CapabilitiesSet)
 register_proto_field(Capabilities)
+register_proto_field(Capability)
 register_proto_field(String)
 register_proto_field(Octets)
 register_proto_field(Scalar)
@@ -197,6 +198,14 @@ register_proto_field(ObjectField)
 register_proto_field(Object)
 register_proto_field(Array)
 register_proto_field(Any)
+
+function get_server_or_client_msg(server_or_client, msg_type_no, tag_no) 
+  local msgtbl = server_or_client and servermessagetype or clientmessagetype 
+  if msgtbl == nil then
+    return nil 
+  end
+  return msgtbl[msg_type_no]
+end
 
 function get_proto_field(server_or_client, msg_type_no, tag_no) 
   info(string.format("[%s] msg_type_no(%d) tag_no(%d)",(server_or_client and "s-c" or "c->s"), msg_type_no, tag_no))
@@ -286,6 +295,7 @@ terminal_type = {
   ,"bool"
   ,"string"
   ,"bytes"
+  ,"Scalar.type"
 }
 
 -- https://stackoverflow.com/questions/33510736/check-if-array-contains-specific-value
@@ -363,6 +373,10 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
             item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
                          , po, wiretype, tagno, le, acc, va))
             -- recursive
+            local next_tvb = msg_payload(item_offset + 1 + readsize, acc)
+            local next_msg = get_server_or_client_msg(direction, msg_type_num, tagno)
+            next_msg =  Capability -- debug
+            processTree(next_tvb, next_msg, item, acc)
             
           end
         end
@@ -372,9 +386,7 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
   end
 end
 
-
-
-
+-- lettle ending and 7bit each
 function getLengthVal(offset, tvb) 
   offsetstart = offset
   b = tvb(offset, 1)
@@ -543,52 +555,62 @@ DissectorTable.get("tcp.port"):add(8000,xproto)
 -- 
 function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtree
                                              -- [0a 03 74 6c 73 12 08 08 01 12 04 08 07 40 00], Capability, tree_capability, 15
+  -- info(string.format("*processTree len (%d)", len))
   local l_pos = 0
   local l_tvb = tvb
   local l_msg = msg
-  local l_msg_len = l_tvb:len()
+  local l_msg_len = tvb:len()
   local l_subtree = subtree
 
   while (l_pos < l_msg_len) do
-     local l_wiretype, l_tag_no, l_po = getwiretag(l_pos, l_tvb) -- 0a
+     local l_wire_type, l_tag_no, l_po = getwiretag(l_pos, l_tvb) -- 0a
      l_pos = l_pos + 1
 
+     -- info(string.format("*wire_type(%d), tag_no(%d)", l_wire_type, l_tag_no))
      if l_wire_type == 0 then
-       local val, acc, po, readsize = getLengthVal(po, msg_payload)
+       -- info("*l_wire_type == 0")
+       local val, acc, po, readsize = getLengthVal(l_pos, l_tvb)
        l_pos = l_pos + readsize
-       item = payload:add(l_msg[l_tag_no].protofield, msg_payload(item_offset, 1 + readsize))
-       item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%d) acc (%d)", po, wiretype, tagno, val, acc))
+       -- info(string.format("val (%d)", val))
+       -- info(l_msg)
+       -- info(l_msg[l_tag_no])
+       -- info(l_msg[l_tag_no].protofield)
+       item = l_subtree:add(l_msg[l_tag_no].protofield, l_tvb(l_pos - readsize , readsize))
+       item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%d) acc (%d)", po, l_wire_type, l_tag_no, val, acc))
 
      elseif l_wire_type == 2 then
-       local l_type = msg[l_tag_no].type                              -- tag=1 --> l_type=string
-       local le, acc, po, readsize = getLengthValo(po, msg_payload)
+       -- info("*l_wire_type == 2")
+       -- info(l_msg[l_tag_no])
+       local l_type = l_msg[l_tag_no].type                              -- tag=1 --> l_type=string
+       info(string.format("*type(%s)", l_type))
+       local le, acc, po, readsize = getLengthVal(l_pos, l_tvb)
        l_pos = l_pos + readsize
 
        if isTerminal(l_type) then
+         -- info("*isTerminal")
          local l_next_tvb = l_tvb(l_pos, acc)
-         va = msg_payload(l_pos, acc) : string()
+         va = l_tvb(l_pos, acc) : string()
          l_pos = l_pos + acc
          l_subtree
            :add(l_msg[l_tag_no].protofield, l_next_tvb)
            :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
-                         , po, wiretype, tagno, le, acc, va))
+                         , po, l_wire_type, l_tag_no, le, acc, va))
        else 
          -- recursive
+         -- info("*recursive")
          local l_next_tvb = l_tvb(l_pos, acc)
          l_pos = l_pos + acc
-         local l_next_subtree = l_subtree(l_msg[l_tag_no].protofield, l_next_tvb)
+         -- info(l_msg[l_tag_no])
+         -- info(l_msg[l_tag_no].name)
+         -- info(l_msg[l_tag_no].type)
+         -- info(l_msg[l_tag_no].protofield)
          local l_next_msg = message_table[l_msg[l_tag_no].type]
-         processTree(l_next_tvb, l_next_subtree, l_next_msg, acc) 
+         local l_next_subtree = l_subtree:add(l_msg[l_tag_no].protofield, l_next_tvb)
+         processTree(l_next_tvb, l_next_msg, l_next_subtree, acc) 
        end
 
      end
   end
-
-  -- wire_num, tag_no <- tvb
-  -- w1
-     -- add w1 subtree
-  -- w2 recursive
-     -- recursive (new_tvb, msg, subtree, len)
 end
 
 
