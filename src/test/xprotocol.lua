@@ -1,5 +1,9 @@
 require "alien"
 
+-- naminig rule
+-- identifier  -->  word1 .. "_" .. word2
+
+
 local xproto = Proto ("XProtocol", "X Protocol Dissector");
 
 local packet_cnt
@@ -32,23 +36,79 @@ state = {
 }
 
 -- mysql_connection.proto
-capability = {
+Capability = {
   [1] = {attr = "required", type = "string",               name = "name",  tag = 1}
  ,[2] = {attr = "required", type = "Mysqlx.Datatypes.Any", name = "value", tag = 2}
 }
-capabilities = {
+Capabilities = {
   [1] = {attr = "repeated", type = "Capability", name="capabilities", tag  = 1}
 }
-capabilitiesget = {
+CapabilitiesGet = {
 }
-capabilitiesset = {
+CapabilitiesSet = {
   [1] = {attr = "repeated", type = "Capabilities", name="capabilities", tag  = 1}
 }
 close = {
 }
+-- mysql_datatypes.proto
+String = {
+   [1] = {attr = "required" , type = "bytes" , name="value" , tag = 1}
+  ,[2] = {attr = "optional" , type = "uint64", name="collation", tag = 2}
+}
+Octets = {
+   [1] = {attr = "required" , type = "bytes",  name = "value",        tag  = 1}
+  ,[2] = {attr = "optional" , type = "uint32", name = "content_type", tag  = 2}
+}
 
+--  enum Type {
+--    V_SINT = 1;
+--    V_UINT = 2;
+--    V_NULL = 3;
+--    V_OCTETS = 4;
+--    V_DOUBLE = 5;
+--    V_FLOAT = 6;
+--    V_BOOL  = 7;
+--    V_STRING  = 8;
+--  };
 
-columnmetadata = {
+Scalar = {
+    [1] = {attr = "required" , type = "Type", name = "type", tag   = 1}
+   ,[2] = {attr = "optional" , type = "sint64", name = "v_signed_int", tag   = 2}
+   ,[3] = {attr = "optional" , type = "uint64", name = "v_unsigned_int", tag   = 3}
+   ,[5] = {attr = "optional" , type = "Octets", name = "v_octets", tag   = 5}
+   ,[6] = {attr = "optional" , type = "double", name = "v_double", tag   = 6}
+   ,[7] = {attr = "optional" , type = "float", name = "v_float", tag   = 7}
+   ,[8] = {attr = "optional" , type = "bool", name = "v_bool", tag   = 8}
+   ,[9] = {attr = "optional" , type = "String", name = "v_string", tag   = 9}
+}
+
+ObjectField = {
+   [1] = {attr = "required" , type = "string", name = "key", tag   = 1}
+  ,[2] = {attr = "required" , type = "Any", name = "value", tag   = 2}
+}
+
+Object = {
+  [1] = {attr = "repeated" , type = "ObjectField", name = "fld", tag   = 1}
+}
+
+Array = {
+  [1] = {attr = "repeated" , type = "Any", name = "value", tag   = 1}
+}
+
+Any = {
+--   enum Type {
+--     SCALAR = 1
+--     OBJECT = 2
+--     ARRAY  = 3
+--   }
+    [1] = {attr = "required" , type = "Type",   name = "type",   tag = 1}
+  , [2] = {attr = "optional" , type = "Scalar", name = "scalar", tag = 2}
+  , [3] = {attr = "optional" , type = "Object", name = "obj",    tag = 3}
+  , [4] = {attr = "optional" , type = "Array",  name = "array",  tag = 4}
+}
+
+--
+ColumnMetaData = {
     [1]  = {type = "FieldType", name = "type"             , tag=1 }
   , [2]  = {type = "bytes",     name = "name"             , tag=2 }
   , [3]  = {type = "bytes",     name = "original_name"    , tag=3 }
@@ -62,11 +122,27 @@ columnmetadata = {
   , [11] = {type = "uint32",    name = "flags"            , tag=11}
   , [12] = {type = "uint32",    name = "content_type"     , tag=12}
 } 
+-- message_table
+message_table = {
+    Capability      = Capability
+  , Capabilities    = Capabilities
+  , CapabilitiesGet = CapabilitiesGet
+  , CapabilitiesPut = CapabilitiesPut
+  , ColumnMetaData  = ColumnMetaData 
+  , String = String
+  , Octets = Octets
+  , Scalar = Scalar
+  , ObjectField = ObjectField
+  , Object = Object
+  , Array = Array
+  , Any = Any
+}
+
 
 --
 clientmessagetype = {
-   [1]  = {name = "CON_CAPABILITIES_GET" , definition = capabilitiesget }
-  ,[2]  = {name = "CON_CAPABILITIES_SET" , definition = capabilitiesset }
+   [1]  = {name = "CON_CAPABILITIES_GET" , definition = CapabilitiesGet }
+  ,[2]  = {name = "CON_CAPABILITIES_SET" , definition = CapabilitiesSet }
   ,[3]  = {name = "CON_CLOSE" , definition = nil }
   ,[4]  = {name = "SESS_AUTHENTICATE_START" , definition = nil }
   ,[5]  = {name = "SESS_AUTHENTICATE_CONTINUE" , definition = nil }
@@ -87,11 +163,11 @@ clientmessagetype = {
 servermessagetype = {
    [0]  = {name = "OK" , definition = nil  }
   ,[1]  = {name = "ERROR" , definition = nil  }
-  ,[2]  = {name = "CONN_CAPABILITIES" , definition = capabilities }
+  ,[2]  = {name = "CONN_CAPABILITIES" , definition = Capabilities }
   ,[3]  = {name = "SESS_AUTHENTICATE_CONTINUE" , definition = nil  }
   ,[4]  = {name = "SESS_AUTHENTICATE_OK" , definition = nil  }
   ,[11] = {name = "NOTICE" , definition = nil  }
-  ,[12] = {name = "RESULTSET_COLUMN_META_DATA" , definition = columnmetadata }
+  ,[12] = {name = "RESULTSET_COLUMN_META_DATA" , definition = ColumnMetaData }
   ,[13] = {name = "RESULTSET_ROW" , definition = nil  }
   ,[14] = {name = "RESULTSET_FETCH_DONE" , definition = nil  }
   ,[15] = {name = "RESULTSET_FETCH_SUSPENDED" , definition = nil  }
@@ -109,10 +185,18 @@ function register_proto_field(def_tbl)
   end 
 end
 
-register_proto_field(columnmetadata)
-register_proto_field(capabilitiesget)
-register_proto_field(capabilitiesset)
-register_proto_field(capabilities)
+-- register field for each message
+register_proto_field(ColumnMetaData)
+register_proto_field(CapabilitiesGet)
+register_proto_field(CapabilitiesSet)
+register_proto_field(Capabilities)
+register_proto_field(String)
+register_proto_field(Octets)
+register_proto_field(Scalar)
+register_proto_field(ObjectField)
+register_proto_field(Object)
+register_proto_field(Array)
+register_proto_field(Any)
 
 function get_proto_field(server_or_client, msg_type_no, tag_no) 
   info(string.format("[%s] msg_type_no(%d) tag_no(%d)",(server_or_client and "s-c" or "c->s"), msg_type_no, tag_no))
@@ -186,6 +270,38 @@ function getMessageParts (offset, tvb)
   return offset, msg_size, payload_len, msg_type, msg_type_num, msg_payload
 end
 
+terminal_type = {
+   "double"
+  ,"float"
+  ,"int32"
+  ,"int64"
+  ,"uint32"
+  ,"uint64"
+  ,"sint32"
+  ,"sint64"
+  ,"fixed32"
+  ,"fixed64"
+  ,"sfixed32"
+  ,"sfixed64"
+  ,"bool"
+  ,"string"
+  ,"bytes"
+}
+
+-- https://stackoverflow.com/questions/33510736/check-if-array-contains-specific-value
+function has_value (tab, val)
+    for index, value in ipairs(tab) do
+        if value == val then
+            return true
+        end
+    end
+    return false
+end
+
+function isTerminal(val) 
+  return has_value(terminal_type, val)
+end
+
 info ("================================================================")
 info (" start" )
 info ("================================================================")
@@ -246,6 +362,8 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
             item = payload:add(ff , msg_payload(item_offset, 1 + readsize + acc))
             item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
                          , po, wiretype, tagno, le, acc, va))
+            -- recursive
+            
           end
         end
       end
@@ -253,6 +371,9 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
     updateState(msg_size, payload_len, msg_type, msg_type_num, msg_payload)
   end
 end
+
+
+
 
 function getLengthVal(offset, tvb) 
   offsetstart = offset
@@ -395,4 +516,79 @@ DissectorTable.get("tcp.port"):add(8000,xproto)
 --       ~~          **    **     **                **
 -- 0040  60 02  
 --       ** 
+
+-- [S-C] a Capability of Capabilities
+--
+-- Capabilities
+--
+-- +Capability w2 
+-- |      
+-- |     +string        +Any w2
+-- |     |              | 
+-- |     |              |     +Type +Scalar w2
+-- |     |              |     |     |     
+-- |     |              |     |     |     +Type 
+-- |     |              |     |     |     |      
+-- |     |              |     |     |     |      +bool w2
+-- |     |              |     |     |     |      |
+-- 0a 0f 0a 03 74 6c 73 12 08 08 01 12 04 08 07 40 00
+-- ** ~~ ** ~~          ** ~~ **    ** ~~ **    **
+--
+-- 0a 0000 1010 wire=2, tag=1
+-- 12 0001 0010 wire=2, tag=2
+-- 08 0000 1000 wire=0, tag=1      
+-- 40 0100 0000 wire=0, tag=8       
+-- 0f -> 15
+--
+-- 
+function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtree
+                                             -- [0a 03 74 6c 73 12 08 08 01 12 04 08 07 40 00], Capability, tree_capability, 15
+  local l_pos = 0
+  local l_tvb = tvb
+  local l_msg = msg
+  local l_msg_len = l_tvb:len()
+  local l_subtree = subtree
+
+  while (l_pos < l_msg_len) do
+     local l_wiretype, l_tag_no, l_po = getwiretag(l_pos, l_tvb) -- 0a
+     l_pos = l_pos + 1
+
+     if l_wire_type == 0 then
+       local val, acc, po, readsize = getLengthVal(po, msg_payload)
+       l_pos = l_pos + readsize
+       item = payload:add(l_msg[l_tag_no].protofield, msg_payload(item_offset, 1 + readsize))
+       item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%d) acc (%d)", po, wiretype, tagno, val, acc))
+
+     elseif l_wire_type == 2 then
+       local l_type = msg[l_tag_no].type                              -- tag=1 --> l_type=string
+       local le, acc, po, readsize = getLengthValo(po, msg_payload)
+       l_pos = l_pos + readsize
+
+       if isTerminal(l_type) then
+         local l_next_tvb = l_tvb(l_pos, acc)
+         va = msg_payload(l_pos, acc) : string()
+         l_pos = l_pos + acc
+         l_subtree
+           :add(l_msg[l_tag_no].protofield, l_next_tvb)
+           :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
+                         , po, wiretype, tagno, le, acc, va))
+       else 
+         -- recursive
+         local l_next_tvb = l_tvb(l_pos, acc)
+         l_pos = l_pos + acc
+         local l_next_subtree = l_subtree(l_msg[l_tag_no].protofield, l_next_tvb)
+         local l_next_msg = message_table[l_msg[l_tag_no].type]
+         processTree(l_next_tvb, l_next_subtree, l_next_msg, acc) 
+       end
+
+     end
+  end
+
+  -- wire_num, tag_no <- tvb
+  -- w1
+     -- add w1 subtree
+  -- w2 recursive
+     -- recursive (new_tvb, msg, subtree, len)
+end
+
 
