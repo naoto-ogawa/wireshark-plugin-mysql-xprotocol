@@ -35,6 +35,16 @@ state = {
   , msg_payload  = nil
 }
 
+
+-- mysqlx_crud.proto
+-- mysqlx_expect.proto
+-- mysqlx_expr.proto
+-- mysqlx_notice.proto
+-- mysqlx_resultset.proto
+-- mysqlx_session.proto
+-- mysqlx_sql.proto
+
+
 -- mysql_connection.proto
 Capability = {
   [1] = {attr = "required", type = "string" , name = "name"             , tag = 1}
@@ -95,51 +105,328 @@ Array = {
   [1] = {attr = "repeated" , type = "Any", name = "value", tag = 1}
 }
 
-Any = {
 --   enum Type {
 --     SCALAR = 1
 --     OBJECT = 2
 --     ARRAY  = 3
 --   }
+AnyType = {
+   [1] = "SCALAR"
+  ,[2] = "OBJECT"
+  ,[3] = "ARRAY"
+}
+
+Any = {
     [1] = {attr = "required" , type = "Type"   , name = "Any.type" , tag = 1}
   , [2] = {attr = "optional" , type = "Scalar" , name = "scalar"   , tag = 2}
   , [3] = {attr = "optional" , type = "Object" , name = "obj"      , tag = 3}
   , [4] = {attr = "optional" , type = "Array"  , name = "array"    , tag = 4}
+ -- , type_fun = function(v) return AnyType[v] end
 }
 
---
+-- mysqlx_crud.proto
+Column = {
+  [1] = {attr = "optional" , type = "string" , name="name" , tag = 1}
+ ,[2] = {attr = "optional" , type = "string" , name="alias" , tag = 2}
+ ,[3] = {attr = "repeated" , type = "Mysqlx.Expr.DocumentPathItem" , name="document_path" , tag = 3}
+}
+Projection = {
+  [1] = {attr = "required" , type = "Mysqlx.Expr.Expr" , name="source" , tag = 1}
+ ,[2] = {attr = "optional" , type = "string" , name="alias" , tag = 2}
+}
+DataModelEnum = {  -- type_fun = function(v) return XXXEnum() end
+  [1] = "DOCUMENT"
+ ,[2] = "TABLE"
+}
+Collection = {
+  [1] = {attr = "required" , type = "string" , name="name" , tag = 1}
+ ,[2] = {attr = "optional" , type = "string" , name="schema" , tag = 2}
+}
+Limit = {
+  [1] = {attr = "required" , type = "uint64" , name="row_count" , tag = 1}
+ ,[2] = {attr = "optional" , type = "uint64" , name="offset" , tag = 2}
+}
+Order = {
+DirectionEnum = {  -- type_fun = function(v) return XXXEnum() end
+  [1] = "ASC"
+ ,[2] = "DESC"
+}
+ ,[1] = {attr = "required" , type = "Mysqlx.Expr.Expr" , name="expr" , tag = 1}
+ ,[2] = {attr = "optional" , type = "Direction" , name="direction" , tag = 2}
+}
+UpdateOperation = {
+UpdateTypeEnum = {  -- type_fun = function(v) return XXXEnum() end
+  [1] = "SET"
+ ,[2] = "ITEM_REMOVE"
+ ,[3] = "ITEM_SET"
+ ,[4] = "ITEM_REPLACE"
+ ,[5] = "ITEM_MERGE"
+ ,[6] = "ARRAY_INSERT"
+ ,[7] = "ARRAY_APPEND"
+}
+ ,[1] = {attr = "required" , type = "Mysqlx.Expr.ColumnIdentifier" , name="source" , tag = 1}
+ ,[2] = {attr = "required" , type = "UpdateType" , name="operation" , tag = 2}
+ ,[3] = {attr = "optional" , type = "Mysqlx.Expr.Expr" , name="value" , tag = 3}
+}
+Find = {
+  [2] = {attr = "required" , type = "Collection" , name="collection" , tag = 2}
+ ,[3] = {attr = "optional" , type = "DataModel" , name="data_model" , tag = 3}
+ ,[4] = {attr = "repeated" , type = "Projection" , name="projection" , tag = 4}
+ ,[5] = {attr = "optional" , type = "Mysqlx.Expr.Expr" , name="criteria" , tag = 5}
+ ,[11] = {attr = "repeated" , type = "Mysqlx.Datatypes.Scalar" , name="args" , tag = 11}
+ ,[6] = {attr = "optional" , type = "Limit" , name="limit" , tag = 6}
+ ,[7] = {attr = "repeated" , type = "Order" , name="order" , tag = 7}
+ ,[8] = {attr = "repeated" , type = "Mysqlx.Expr.Expr" , name="grouping" , tag = 8}
+ ,[9] = {attr = "optional" , type = "Mysqlx.Expr.Expr" , name="grouping_criteria" , tag = 9}
+}
+Insert = {
+  [1] = {attr = "required" , type = "Collection" , name="collection" , tag = 1}
+ ,[2] = {attr = "optional" , type = "DataModel" , name="data_model" , tag = 2}
+ ,[3] = {attr = "repeated" , type = "Column" , name="projection" , tag = 3}
+ ,TypedRow = { -- TODO
+  [1] = {attr = "repeated" , type = "Mysqlx.Expr.Expr" , name="field" , tag = 1}
+}
+ ,[4] = {attr = "repeated" , type = "TypedRow" , name="row" , tag = 4}
+ ,[5] = {attr = "repeated" , type = "Mysqlx.Datatypes.Scalar" , name="args" , tag = 5}
+}
+Update = {
+  [2] = {attr = "required" , type = "Collection" , name="collection" , tag = 2}
+ ,[3] = {attr = "optional" , type = "DataModel" , name="data_model" , tag = 3}
+ ,[4] = {attr = "optional" , type = "Mysqlx.Expr.Expr" , name="criteria" , tag = 4}
+ ,[8] = {attr = "repeated" , type = "Mysqlx.Datatypes.Scalar" , name="args" , tag = 8}
+ ,[5] = {attr = "optional" , type = "Limit" , name="limit" , tag = 5}
+ ,[6] = {attr = "repeated" , type = "Order" , name="order" , tag = 6}
+ ,[7] = {attr = "repeated" , type = "UpdateOperation" , name="operation" , tag = 7}
+}
+Delete = {
+  [1] = {attr = "required" , type = "Collection" , name="collection" , tag = 1}
+ ,[2] = {attr = "optional" , type = "DataModel" , name="data_model" , tag = 2}
+ ,[3] = {attr = "optional" , type = "Mysqlx.Expr.Expr" , name="criteria" , tag = 3}
+ ,[6] = {attr = "repeated" , type = "Mysqlx.Datatypes.Scalar" , name="args" , tag = 6}
+ ,[4] = {attr = "optional" , type = "Limit" , name="limit" , tag = 4}
+ ,[5] = {attr = "repeated" , type = "Order" , name="order" , tag = 5}
+}
+ViewAlgorithmEnum = {  -- type_fun = function(v) return XXXEnum() end
+  [1] = "UNDEFINED"
+ ,[2] = "MERGE"
+ ,[3] = "TEMPTABLE"
+}
+ViewSqlSecurityEnum = {  -- type_fun = function(v) return XXXEnum() end
+  [1] = "INVOKER"
+ ,[2] = "DEFINER"
+}
+ViewCheckOptionEnum = {  -- type_fun = function(v) return XXXEnum() end
+  [1] = "LOCAL"
+ ,[2] = "CASCADED"
+}
+CreateView = {
+  [1] = {attr = "required" , type = "Collection" , name="collection" , tag = 1}
+ ,[2] = {attr = "optional" , type = "string" , name="definer" , tag = 2}
+ ,[3] = {attr = "optional" , type = "ViewAlgorithm" , name="algorithm" , tag = 3}
+ ,[4] = {attr = "optional" , type = "ViewSqlSecurity" , name="security" , tag = 4}
+ ,[5] = {attr = "optional" , type = "ViewCheckOption" , name="check" , tag = 5}
+ ,[6] = {attr = "repeated" , type = "string" , name="column" , tag = 6}
+ ,[7] = {attr = "required" , type = "Find" , name="stmt" , tag = 7}
+ ,[8] = {attr = "optional" , type = "bool" , name="replace_existing" , tag = 8}
+}
+ModifyView = {
+  [1] = {attr = "required" , type = "Collection" , name="collection" , tag = 1}
+ ,[2] = {attr = "optional" , type = "string" , name="definer" , tag = 2}
+ ,[3] = {attr = "optional" , type = "ViewAlgorithm" , name="algorithm" , tag = 3}
+ ,[4] = {attr = "optional" , type = "ViewSqlSecurity" , name="security" , tag = 4}
+ ,[5] = {attr = "optional" , type = "ViewCheckOption" , name="check" , tag = 5}
+ ,[6] = {attr = "repeated" , type = "string" , name="column" , tag = 6}
+ ,[7] = {attr = "optional" , type = "Find" , name="stmt" , tag = 7}
+}
+DropView = {
+  [1] = {attr = "required" , type = "Collection" , name="collection" , tag = 1}
+ ,[2] = {attr = "optional" , type = "bool" , name="if_exists" , tag = 2}
+}
+-- mysqlx_expect.proto
+Open = {
+Condition = {
+ConditionOperationEnum = {  -- type_fun = function(v) return XXXEnum() end
+  [0] = "EXPECT_OP_SET"
+ ,[1] = "EXPECT_OP_UNSET"
+}
+ ,[1] = {attr = "required" , type = "uint32" , name="condition_key" , tag = 1}
+ ,[2] = {attr = "optional" , type = "bytes" , name="condition_value" , tag = 2}
+ ,[3] = {attr = "optional" , type = "ConditionOperation" , name="op" , tag = 3}
+}
+,CtxOperationEnum = {  -- type_fun = function(v) return XXXEnum() end
+  [0] = "EXPECT_CTX_COPY_PREV"
+ ,[1] = "EXPECT_CTX_EMPTY"
+}
+ ,[1] = {attr = "optional" , type = "CtxOperation" , name="op" , tag = 1}
+ ,[2] = {attr = "repeated" , type = "Condition" , name="cond" , tag = 2}
+}
+Close = {
+}
+-- mysqlx_expr.proto
+Expr = {
+TypeEnum = {  -- type_fun = function(v) return XXXEnum() end
+  [1] = "IDENT"
+ ,[2] = "LITERAL"
+ ,[3] = "VARIABLE"
+ ,[4] = "FUNC_CALL"
+ ,[5] = "OPERATOR"
+ ,[6] = "PLACEHOLDER"
+ ,[7] = "OBJECT"
+ ,[8] = "ARRAY"
+}
+ ,[1] = {attr = "required" , type = "Type" , name="type" , tag = 1}
+ ,[2] = {attr = "optional" , type = "ColumnIdentifier" , name="identifier" , tag = 2}
+ ,[3] = {attr = "optional" , type = "string" , name="variable" , tag = 3}
+ ,[4] = {attr = "optional" , type = "Mysqlx.Datatypes.Scalar" , name="literal" , tag = 4}
+ ,[5] = {attr = "optional" , type = "FunctionCall" , name="function_call" , tag = 5}
+ ,[6] = {attr = "optional" , type = "Operator" , name="operator" , tag = 6}
+ ,[7] = {attr = "optional" , type = "uint32" , name="position" , tag = 7}
+ ,[8] = {attr = "optional" , type = "ObjectExpr" , name="object" , tag = 8}
+ ,[9] = {attr = "optional" , type = "ArrayExpr" , name="array" , tag = 9}
+}
+Identifier = {
+  [1] = {attr = "required" , type = "string" , name="name" , tag = 1}
+ ,[2] = {attr = "optional" , type = "string" , name="schema_name" , tag = 2}
+}
+DocumentPathItem = {
+TypeEnum = {  -- type_fun = function(v) return XXXEnum() end
+  [1] = "MEMBER"
+ ,[2] = "MEMBER_ASTERISK"
+ ,[3] = "ARRAY_INDEX"
+ ,[4] = "ARRAY_INDEX_ASTERISK"
+ ,[5] = "DOUBLE_ASTERISK"
+}
+ ,[1] = {attr = "required" , type = "Type" , name="type" , tag = 1}
+ ,[2] = {attr = "optional" , type = "string" , name="value" , tag = 2}
+ ,[3] = {attr = "optional" , type = "uint32" , name="index" , tag = 3}
+}
+ColumnIdentifier = {
+  [1] = {attr = "repeated" , type = "Mysqlx.Expr.DocumentPathItem" , name="document_path" , tag = 1}
+ ,[2] = {attr = "optional" , type = "string" , name="name" , tag = 2}
+ ,[3] = {attr = "optional" , type = "string" , name="table_name" , tag = 3}
+ ,[4] = {attr = "optional" , type = "string" , name="schema_name" , tag = 4}
+}
+FunctionCall = {
+  [1] = {attr = "required" , type = "Identifier" , name="name" , tag = 1}
+ ,[2] = {attr = "repeated" , type = "Expr" , name="param" , tag = 2}
+}
+Operator = {
+  [1] = {attr = "required" , type = "string" , name="name" , tag = 1}
+ ,[2] = {attr = "repeated" , type = "Expr" , name="param" , tag = 2}
+}
+ObjectExpr = {
+ObjectFieldExpr = {
+  [1] = {attr = "required" , type = "string" , name="key" , tag = 1}
+ ,[2] = {attr = "required" , type = "Expr" , name="value" , tag = 2}
+}
+ ,[1] = {attr = "repeated" , type = "ObjectFieldExpr" , name="fld" , tag = 1}
+}
+ArrayExpr = {
+  [1] = {attr = "repeated" , type = "Expr" , name="value" , tag = 1}
+}
+-- mysqlx_notice.proto
+Frame = {
+ScopeEnum = {  -- type_fun = function(v) return XXXEnum() end
+  [1] = "GLOBAL"
+ ,[2] = "LOCAL"
+}
+ ,[1] = {attr = "required" , type = "uint32" , name="type" , tag = 1}
+ ,[2] = {attr = "optional" , type = "Scope" , name="scope" , tag = 2}
+ ,[3] = {attr = "optional" , type = "bytes" , name="payload" , tag = 3}
+}
+Warning = {
+LevelEnum = {  -- type_fun = function(v) return XXXEnum() end
+  [1] = "NOTE"
+ ,[2] = "WARNING"
+ ,[3] = "ERROR"
+}
+ ,[1] = {attr = "optional" , type = "Level" , name="level" , tag = 1}
+ ,[2] = {attr = "required" , type = "uint32" , name="code" , tag = 2}
+ ,[3] = {attr = "required" , type = "string" , name="msg" , tag = 3}
+}
+SessionVariableChanged = {
+  [1] = {attr = "required" , type = "string" , name="param" , tag = 1}
+ ,[2] = {attr = "optional" , type = "Mysqlx.Datatypes.Scalar" , name="value" , tag = 2}
+}
+SessionStateChanged = {
+ParameterEnum = {  -- type_fun = function(v) return XXXEnum() end
+  [1] = "CURRENT_SCHEMA"
+ ,[2] = "ACCOUNT_EXPIRED"
+ ,[3] = "GENERATED_INSERT_ID"
+ ,[4] = "ROWS_AFFECTED"
+ ,[5] = "ROWS_FOUND"
+ ,[6] = "ROWS_MATCHED"
+ ,[7] = "TRX_COMMITTED"
+ ,[9] = "TRX_ROLLEDBACK"
+ ,[10] = "PRODUCED_MESSAGE"
+ ,[11] = "CLIENT_ID_ASSIGNED"
+}
+ ,[1] = {attr = "required" , type = "Parameter" , name="param" , tag = 1}
+ ,[2] = {attr = "optional" , type = "Mysqlx.Datatypes.Scalar" , name="value" , tag = 2}
+}
+-- mysqlx_resultset.proto
+FetchDoneMoreOutParams = {
+}
+FetchDoneMoreResultsets = {
+}
+FetchDone = {
+}
 ColumnMetaData = {
-    [1]  = {type = "FieldType", name = "type"             , tag=1 }
-  , [2]  = {type = "bytes",     name = "name"             , tag=2 }
-  , [3]  = {type = "bytes",     name = "original_name"    , tag=3 }
-  , [4]  = {type = "bytes",     name = "table"            , tag=4 }
-  , [5]  = {type = "bytes",     name = "original_table"   , tag=5 }
-  , [6]  = {type = "bytes",     name = "schema"           , tag=6 }
-  , [7]  = {type = "bytes",     name = "catalog"          , tag=7 }
-  , [8]  = {type = "uint64",    name = "collation"        , tag=8 }
-  , [9]  = {type = "uint32",    name = "fractional_digits", tag=9 }
-  , [10] = {type = "uint32",    name = "length"           , tag=10}
-  , [11] = {type = "uint32",    name = "flags"            , tag=11}
-  , [12] = {type = "uint32",    name = "content_type"     , tag=12}
-} 
--- message_table
-message_table = {
-    Capability      = Capability
-  , Capabilities    = Capabilities
-  , CapabilitiesGet = CapabilitiesGet
-  , CapabilitiesPut = CapabilitiesPut
-  , ColumnMetaData  = ColumnMetaData 
-  , String          = String
-  , Octets          = Octets
-  , Scalar          = Scalar
-  , ObjectField     = ObjectField
-  , Object          = Object
-  , Array           = Array
-  , Any             = Any
+ FieldTypeEnum = {  -- type_fun = function(v) return XXXEnum() end
+   [1] = "SINT"
+  ,[2] = "UINT"
+  ,[5] = "DOUBLE"
+  ,[6] = "FLOAT"
+  ,[7] = "BYTES"
+  ,[10] = "TIME"
+  ,[12] = "DATETIME"
+  ,[15] = "SET"
+  ,[16] = "ENUM"
+  ,[17] = "BIT"
+  ,[18] = "DECIMAL"
+ }
+ ,[1] = {attr = "required" , type = "FieldType" , name="type" , tag = 1}
+ ,[2] = {attr = "optional" , type = "bytes" , name="name" , tag = 2}
+ ,[3] = {attr = "optional" , type = "bytes" , name="original_name" , tag = 3}
+ ,[4] = {attr = "optional" , type = "bytes" , name="table" , tag = 4}
+ ,[5] = {attr = "optional" , type = "bytes" , name="original_table" , tag = 5}
+ ,[6] = {attr = "optional" , type = "bytes" , name="schema" , tag = 6}
+ ,[7] = {attr = "optional" , type = "bytes" , name="catalog" , tag = 7}
+ ,[8] = {attr = "optional" , type = "uint64" , name="collation" , tag = 8}
+ ,[9] = {attr = "optional" , type = "uint32" , name="fractional_digits" , tag = 9}
+ ,[10] = {attr = "optional" , type = "uint32" , name="length" , tag = 10}
+ ,[11] = {attr = "optional" , type = "uint32" , name="flags" , tag = 11}
+ ,[12] = {attr = "optional" , type = "uint32" , name="content_type" , tag = 12}
 }
-
-
---
+Row = {
+  [1] = {attr = "repeated" , type = "bytes" , name="field" , tag = 1}
+}
+-- mysqlx_session.proto
+AuthenticateStart = {
+  [1] = {attr = "required" , type = "string" , name="mech_name" , tag = 1}
+ ,[2] = {attr = "optional" , type = "bytes" , name="auth_data" , tag = 2}
+ ,[3] = {attr = "optional" , type = "bytes" , name="initial_response" , tag = 3}
+}
+AuthenticateContinue = {
+  [1] = {attr = "required" , type = "bytes" , name="auth_data" , tag = 1}
+}
+AuthenticateOk = {
+  [1] = {attr = "optional" , type = "bytes" , name="auth_data" , tag = 1}
+}
+Reset = {
+}
+Close = {
+}
+-- mysqlx_sql.proto
+StmtExecute = {
+  [1] = {attr = "required" , type = "bytes" , name="stmt" , tag = 1}
+ ,[2] = {attr = "repeated" , type = "Mysqlx.Datatypes.Any" , name="args" , tag = 2}
+ ,[3] = {attr = "optional" , type = "string" , name="namespace" , tag = 3}
+ ,[4] = {attr = "optional" , type = "bool" , name="compact_metadata" , tag = 4}
+}
+StmtExecuteOk = {
+}
+-- mysqlx.proto
 clientmessagetype = {
    [1]  = {name = "CON_CAPABILITIES_GET"       , definition = CapabilitiesGet }
   ,[2]  = {name = "CON_CAPABILITIES_SET"       , definition = CapabilitiesSet }
@@ -175,17 +462,36 @@ servermessagetype = {
   ,[17] = {name = "SQL_STMT_EXECUTE_OK"                  , definition = nil  }
   ,[18] = {name = "RESULTSET_FETCH_DONE_MORE_OUT_PARAMS" , definition = nil  }
 } 
+Ok = {
+  [1] = {attr = "optional" , type = "string", name ="msg" , tag  = 1}
+}
+Error = {
+  [1] = {attr = "optional" , type = "Severity" , name="severity" , tag = 1}
+ ,[2] = {attr = "required" , type = "uint32" , name="code" , tag = 2}
+ ,[4] = {attr = "required" , type = "string" , name="sql_state" , tag = 4}
+ ,[3] = {attr = "required" , type = "string" , name="msg" , tag = 3}
+ ,SeverityEnum = {  -- type_fun = function(v) return XXXEnum() end
+  [0] = "ERROR"
+ ,[1] = "FATAL"
+}
+}
 
+-- ====================================================================================== --
+-- end of data definition  --
+-- ====================================================================================== --
+
+-- register field for each message
 function register_proto_field(def_tbl) 
   for key,value in pairs(def_tbl) do 
-     local nm = def_tbl[key].name
-     ff = ProtoField.new ("x." .. nm, nm, ftypes.BYTES)
-     f[def_tbl[key].name] = ff
-     def_tbl[key]["protofield"] = ff
+     if (type(key) == "number") then
+       local nm = def_tbl[key].name
+       ff = ProtoField.new ("x." .. nm, nm, ftypes.BYTES)
+       f[def_tbl[key].name] = ff
+       def_tbl[key]["protofield"] = ff
+     end
   end 
 end
 
--- register field for each message
 register_proto_field(ColumnMetaData)
 register_proto_field(CapabilitiesGet)
 register_proto_field(CapabilitiesSet)
@@ -198,6 +504,22 @@ register_proto_field(ObjectField)
 register_proto_field(Object)
 register_proto_field(Array)
 register_proto_field(Any)
+
+-- message_table
+message_table = {
+    Capability      = Capability
+  , Capabilities    = Capabilities
+  , CapabilitiesGet = CapabilitiesGet
+  , CapabilitiesPut = CapabilitiesPut
+  , ColumnMetaData  = ColumnMetaData 
+  , String          = String
+  , Octets          = Octets
+  , Scalar          = Scalar
+  , ObjectField     = ObjectField
+  , Object          = Object
+  , Array           = Array
+  , Any             = Any
+}
 
 function get_server_or_client_msg(server_or_client, msg_type_no, tag_no) 
   local msgtbl = server_or_client and servermessagetype or clientmessagetype 
@@ -230,10 +552,6 @@ end
 function get_message_name(server_or_client, msg_type_num)
   return (tostring(server_or_client and servermessagetype[msg_type_num].name or clientmessagetype[msg_type_num].name))
 end
-
---
---
---
 
 function getMessageParts (offset, tvb)
   -- size
