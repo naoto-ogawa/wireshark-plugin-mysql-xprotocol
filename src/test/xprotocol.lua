@@ -3,7 +3,6 @@ require "alien"
 -- naminig rule
 -- identifier  -->  word1 .. "_" .. word2
 
-
 local xproto = Proto ("XProtocol", "X Protocol Dissector");
 
 local packet_cnt
@@ -37,8 +36,8 @@ state = {
 
 -- mysql_connection.proto
 Capability = {
-  [1] = {attr = "required", type = "string" , name = "Capability.name"  , tag = 1}
- ,[2] = {attr = "required", type = "Any"    , name = "Capability.value" , tag = 2}
+  [1] = {attr = "required", type = "string" , name = "name"  , tag = 1}
+ ,[2] = {attr = "required", type = "Any"    , name = "value" , tag = 2}
 }
 Capabilities = {
   [1] = {attr = "repeated", type = "Capability" , name="capabilities", tag  = 1}
@@ -46,13 +45,13 @@ Capabilities = {
 CapabilitiesGet = {
 }
 CapabilitiesSet = {
-  [1] = {attr = "repeated", type = "Capabilities" , name="CapabilitiesSet.capabilities", tag  = 1}
+  [1] = {attr = "repeated", type = "Capabilities" , name="capabilities", tag  = 1}
 }
 close = {
 }
 -- mysql_datatypes.proto
 String = {
-   [1] = {attr = "required" , type = "bytes"  , name="String.value" , tag = 1}
+   [1] = {attr = "required" , type = "bytes"  , name="value" , tag = 1}
   ,[2] = {attr = "optional" , type = "uint64" , name="collation"    , tag = 2}
 }
 Octets = {
@@ -72,7 +71,7 @@ Octets = {
 --  };
 
 Scalar = {
-    [1] = {attr = "required" , type = "Type"   , name = "Scalar.type"    , tag = 1}
+    [1] = {attr = "required" , type = "Type"   , name = "type"    , tag = 1}
    ,[2] = {attr = "optional" , type = "sint64" , name = "v_signed_int"   , tag = 2}
    ,[3] = {attr = "optional" , type = "uint64" , name = "v_unsigned_int" , tag = 3}
    ,[5] = {attr = "optional" , type = "Octets" , name = "v_octets"       , tag = 5}
@@ -92,7 +91,7 @@ Object = {
 }
 
 Array = {
-  [1] = {attr = "repeated" , type = "Any", name = "Array.value", tag = 1}
+  [1] = {attr = "repeated" , type = "Any", name = "value", tag = 1}
 }
 
 Any = {
@@ -101,10 +100,10 @@ Any = {
     ,[2] = "OBJECT"
     ,[3] = "ARRAY"
   }
-  , [1] = {attr = "required" , type = "Type"   , name = "Any.type" , tag = 1}
+  , [1] = {attr = "required" , type = "Type"   , name = "type" , tag = 1}
   , [2] = {attr = "optional" , type = "Scalar" , name = "scalar"   , tag = 2}
   , [3] = {attr = "optional" , type = "Object" , name = "obj"      , tag = 3}
-  , [4] = {attr = "optional" , type = "Array"  , name = "Any.array"    , tag = 4}
+  , [4] = {attr = "optional" , type = "Array"  , name = "array"    , tag = 4}
   , enum_fun = function(v) return AnyType[v] end
 }
 Any[1].converter = Any.enum_fun
@@ -464,7 +463,7 @@ Error = {
 function register_metatable(def_tbl, name)
    local meta = getmetatable(def_tbl)
    meta = meta and meta or {}
-   meta["msg_name"] =  name
+   meta["name"] =  name
    setmetatable(def_tbl, meta)
 end
 
@@ -531,14 +530,14 @@ register_metatable(Error,                   "Error")
 
 -- register field for each message
 function register_proto_field(def_tbl) 
-  -- info (def_tbl)
+  local tbl_name = getmetatable(def_tbl).name
   for key,value in pairs(def_tbl) do 
      if (type(key) == "number") then
        local nm = def_tbl[key].name
-       ff = ProtoField.new ("x." .. nm, nm, ftypes.BYTES)
-       -- info (nm)
-       f[def_tbl[key].name] = ff
-       def_tbl[key]["protofield"] = ff
+       -- info ("*" .. tbl_name .. "." .. nm)
+       pField = ProtoField.new (nm, nm, ftypes.BYTES)
+       f[tbl_name .. "." .. nm]   = pField
+       def_tbl[key]["protofield"] = pField
      end
   end 
 end
@@ -827,8 +826,9 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
             va = msg_payload(po, acc) : string()
             po = po + acc
 
+            info (string.format("** %s, %d, %d", direction and "s" or "c", msg_type_num, tagno))
             ff = get_proto_field(direction, msg_type_num, tagno)
-            info(ff)
+            -- info (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)" , po, wiretype, tagno, le, acc, va))
             item = payload:add(ff , msg_payload(item_offset, 1 + readsize + acc))
             item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
                          , po, wiretype, tagno, le, acc, va))
@@ -1061,10 +1061,10 @@ function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtre
          -- info("*recursive")
          local l_next_tvb = l_tvb(l_pos, acc)
          l_pos = l_pos + acc
-         info(l_msg[l_tag_no])
-         info(l_msg[l_tag_no].name)
-         info(l_msg[l_tag_no].type)
-         info(l_msg[l_tag_no].protofield)
+         -- info(l_msg[l_tag_no])
+         -- info(l_msg[l_tag_no].name)
+         -- info(l_msg[l_tag_no].type)
+         -- info(l_msg[l_tag_no].protofield)
          local l_next_msg = message_table[l_msg[l_tag_no].type]
          local l_next_subtree = l_subtree:add(l_msg[l_tag_no].protofield, l_next_tvb)
          processTree(l_next_tvb, l_next_msg, l_next_subtree, acc) 
