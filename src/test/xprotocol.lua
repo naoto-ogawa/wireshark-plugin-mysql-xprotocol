@@ -35,19 +35,9 @@ state = {
   , msg_payload  = nil
 }
 
-
--- mysqlx_crud.proto
--- mysqlx_expect.proto
--- mysqlx_expr.proto
--- mysqlx_notice.proto
--- mysqlx_resultset.proto
--- mysqlx_session.proto
--- mysqlx_sql.proto
-
-
 -- mysql_connection.proto
 Capability = {
-  [1] = {attr = "required", type = "string" , name = "name"             , tag = 1}
+  [1] = {attr = "required", type = "string" , name = "Capability.name"  , tag = 1}
  ,[2] = {attr = "required", type = "Any"    , name = "Capability.value" , tag = 2}
 }
 Capabilities = {
@@ -56,7 +46,7 @@ Capabilities = {
 CapabilitiesGet = {
 }
 CapabilitiesSet = {
-  [1] = {attr = "repeated", type = "Capabilities" , name="capabilities", tag  = 1}
+  [1] = {attr = "repeated", type = "Capabilities" , name="CapabilitiesSet.capabilities", tag  = 1}
 }
 close = {
 }
@@ -102,27 +92,22 @@ Object = {
 }
 
 Array = {
-  [1] = {attr = "repeated" , type = "Any", name = "value", tag = 1}
-}
-
---   enum Type {
---     SCALAR = 1
---     OBJECT = 2
---     ARRAY  = 3
---   }
-AnyType = {
-   [1] = "SCALAR"
-  ,[2] = "OBJECT"
-  ,[3] = "ARRAY"
+  [1] = {attr = "repeated" , type = "Any", name = "Array.value", tag = 1}
 }
 
 Any = {
-    [1] = {attr = "required" , type = "Type"   , name = "Any.type" , tag = 1}
+  AnyType = {
+     [1] = "SCALAR"
+    ,[2] = "OBJECT"
+    ,[3] = "ARRAY"
+  }
+  , [1] = {attr = "required" , type = "Type"   , name = "Any.type" , tag = 1}
   , [2] = {attr = "optional" , type = "Scalar" , name = "scalar"   , tag = 2}
   , [3] = {attr = "optional" , type = "Object" , name = "obj"      , tag = 3}
-  , [4] = {attr = "optional" , type = "Array"  , name = "array"    , tag = 4}
- -- , type_fun = function(v) return AnyType[v] end
+  , [4] = {attr = "optional" , type = "Array"  , name = "Any.array"    , tag = 4}
+  , enum_fun = function(v) return AnyType[v] end
 }
+Any[1].converter = Any.enum_fun
 
 -- mysqlx_crud.proto
 Column = {
@@ -243,20 +228,20 @@ DropView = {
  ,[2] = {attr = "optional" , type = "bool" , name="if_exists" , tag = 2}
 }
 -- mysqlx_expect.proto
-Open = {
 Condition = {
-ConditionOperationEnum = {  -- type_fun = function(v) return XXXEnum() end
-  [0] = "EXPECT_OP_SET"
- ,[1] = "EXPECT_OP_UNSET"
+  ConditionOperationEnum = {  -- type_fun = function(v) return XXXEnum() end
+    [0] = "EXPECT_OP_SET"
+   ,[1] = "EXPECT_OP_UNSET"
+  }
+  ,[1] = {attr = "required" , type = "uint32" , name="condition_key" , tag = 1}
+  ,[2] = {attr = "optional" , type = "bytes" , name="condition_value" , tag = 2}
+  ,[3] = {attr = "optional" , type = "ConditionOperation" , name="op" , tag = 3}
 }
- ,[1] = {attr = "required" , type = "uint32" , name="condition_key" , tag = 1}
- ,[2] = {attr = "optional" , type = "bytes" , name="condition_value" , tag = 2}
- ,[3] = {attr = "optional" , type = "ConditionOperation" , name="op" , tag = 3}
-}
-,CtxOperationEnum = {  -- type_fun = function(v) return XXXEnum() end
-  [0] = "EXPECT_CTX_COPY_PREV"
- ,[1] = "EXPECT_CTX_EMPTY"
-}
+Open = {
+  CtxOperationEnum = {  -- type_fun = function(v) return XXXEnum() end
+    [0] = "EXPECT_CTX_COPY_PREV"
+   ,[1] = "EXPECT_CTX_EMPTY"
+  }
  ,[1] = {attr = "optional" , type = "CtxOperation" , name="op" , tag = 1}
  ,[2] = {attr = "repeated" , type = "Condition" , name="cond" , tag = 2}
 }
@@ -314,12 +299,12 @@ Operator = {
   [1] = {attr = "required" , type = "string" , name="name" , tag = 1}
  ,[2] = {attr = "repeated" , type = "Expr" , name="param" , tag = 2}
 }
-ObjectExpr = {
 ObjectFieldExpr = {
   [1] = {attr = "required" , type = "string" , name="key" , tag = 1}
  ,[2] = {attr = "required" , type = "Expr" , name="value" , tag = 2}
 }
- ,[1] = {attr = "repeated" , type = "ObjectFieldExpr" , name="fld" , tag = 1}
+ObjectExpr = {
+  [1] = {attr = "repeated" , type = "ObjectFieldExpr" , name="fld" , tag = 1}
 }
 ArrayExpr = {
   [1] = {attr = "repeated" , type = "Expr" , name="value" , tag = 1}
@@ -476,27 +461,93 @@ Error = {
 }
 }
 
+function register_metatable(def_tbl, name)
+   local meta = getmetatable(def_tbl)
+   meta = meta and meta or {}
+   meta["msg_name"] =  name
+   setmetatable(def_tbl, meta)
+end
+
+register_metatable(Capability, "Capability")
+register_metatable(Capabilities, "Capabilities")
+register_metatable(CapabilitiesGet, "CapabilitiesGet")
+register_metatable(CapabilitiesSet, "CapabilitiesSet")
+register_metatable(close, "close")
+register_metatable(String, "String")
+register_metatable(Octets, "Octets")
+register_metatable(Scalar, "Scalar")
+register_metatable(ObjectField, "ObjectField")
+register_metatable(Object, "Object")
+register_metatable(Array, "Array")
+register_metatable(Any, "Any")
+register_metatable(Column, "Column")
+register_metatable(Projection, "Projection")
+register_metatable(Collection, "Collection")
+register_metatable(Limit, "Limit")
+register_metatable(Order, "Order")
+register_metatable(UpdateOperation, "UpdateOperation")
+register_metatable(Find, "Find")
+register_metatable(Insert, "Insert")
+register_metatable(Update, "Update")
+register_metatable(Delete, "Delete")
+register_metatable(CreateView, "CreateView")
+register_metatable(ModifyView, "ModifyView")
+register_metatable(DropView, "DropView")
+register_metatable(Condition, "Condition")
+register_metatable(Open, "Open")
+register_metatable(Close, "Close")
+register_metatable(Expr, "Expr")
+register_metatable(Identifier, "Identifier")
+register_metatable(DocumentPathItem, "DocumentPathItem")
+register_metatable(ColumnIdentifier, "ColumnIdentifier")
+register_metatable(FunctionCall, "FunctionCall")
+register_metatable(Operator, "Operator")
+register_metatable(ObjectFieldExpr, "ObjectFieldExpr")
+register_metatable(ObjectExpr, "ObjectExpr")
+register_metatable(ArrayExpr, "ArrayExpr")
+register_metatable(Frame, "Frame")
+register_metatable(Warning, "Warning")
+register_metatable(SessionVariableChanged, "SessionVariableChanged")
+register_metatable(SessionStateChanged, "SessionStateChanged")
+register_metatable(FetchDoneMoreOutParams, "FetchDoneMoreOutParams")
+register_metatable(FetchDoneMoreResultsets, "FetchDoneMoreResultsets")
+register_metatable(FetchDone, "FetchDone")
+register_metatable(ColumnMetaData, "ColumnMetaData")
+register_metatable(Row, "Row")
+register_metatable(AuthenticateStart, "AuthenticateStart")
+register_metatable(AuthenticateContinue, "AuthenticateContinue")
+register_metatable(AuthenticateOk, "AuthenticateOk")
+register_metatable(Reset, "Reset")
+register_metatable(Close, "Close")
+register_metatable(StmtExecute, "StmtExecute")
+register_metatable(StmtExecuteOk, "StmtExecuteOk")
+register_metatable(clientmessagetype, "clientmessagetype")
+register_metatable(servermessagetype, "servermessagetype")
+register_metatable(Ok, "Ok")
+register_metatable(Error, "Error")
 -- ====================================================================================== --
 -- end of data definition  --
 -- ====================================================================================== --
 
 -- register field for each message
 function register_proto_field(def_tbl) 
+  -- info (def_tbl)
   for key,value in pairs(def_tbl) do 
      if (type(key) == "number") then
        local nm = def_tbl[key].name
        ff = ProtoField.new ("x." .. nm, nm, ftypes.BYTES)
+       -- info (nm)
        f[def_tbl[key].name] = ff
        def_tbl[key]["protofield"] = ff
      end
   end 
 end
 
-register_proto_field(ColumnMetaData)
+register_proto_field(Capability)
+register_proto_field(Capabilities)
 register_proto_field(CapabilitiesGet)
 register_proto_field(CapabilitiesSet)
-register_proto_field(Capabilities)
-register_proto_field(Capability)
+register_proto_field(close)
 register_proto_field(String)
 register_proto_field(Octets)
 register_proto_field(Scalar)
@@ -504,21 +555,111 @@ register_proto_field(ObjectField)
 register_proto_field(Object)
 register_proto_field(Array)
 register_proto_field(Any)
+register_proto_field(Column)
+register_proto_field(Projection)
+register_proto_field(Collection)
+register_proto_field(Limit)
+register_proto_field(Order)
+register_proto_field(UpdateOperation)
+register_proto_field(Find)
+register_proto_field(Insert)
+register_proto_field(Update)
+register_proto_field(Delete)
+register_proto_field(CreateView)
+register_proto_field(ModifyView)
+register_proto_field(DropView)
+register_proto_field(Open)
+register_proto_field(Condition)
+register_proto_field(Close)
+register_proto_field(Expr)
+register_proto_field(Identifier)
+register_proto_field(DocumentPathItem)
+register_proto_field(ColumnIdentifier)
+register_proto_field(FunctionCall)
+register_proto_field(Operator)
+register_proto_field(ObjectExpr)
+register_proto_field(ObjectFieldExpr)
+register_proto_field(ArrayExpr)
+register_proto_field(Frame)
+register_proto_field(Warning)
+register_proto_field(SessionVariableChanged)
+register_proto_field(SessionStateChanged)
+register_proto_field(FetchDoneMoreOutParams)
+register_proto_field(FetchDoneMoreResultsets)
+register_proto_field(FetchDone)
+register_proto_field(ColumnMetaData)
+register_proto_field(Row)
+register_proto_field(AuthenticateStart)
+register_proto_field(AuthenticateContinue)
+register_proto_field(AuthenticateOk)
+register_proto_field(Reset)
+register_proto_field(Close)
+register_proto_field(StmtExecute)
+register_proto_field(StmtExecuteOk)
+register_proto_field(clientmessagetype)
+register_proto_field(servermessagetype)
+register_proto_field(Ok)
+register_proto_field(Error)
 
 -- message_table
 message_table = {
-    Capability      = Capability
-  , Capabilities    = Capabilities
-  , CapabilitiesGet = CapabilitiesGet
-  , CapabilitiesPut = CapabilitiesPut
-  , ColumnMetaData  = ColumnMetaData 
-  , String          = String
-  , Octets          = Octets
-  , Scalar          = Scalar
-  , ObjectField     = ObjectField
-  , Object          = Object
-  , Array           = Array
-  , Any             = Any
+   Capability              = Capability
+ , Capabilities            = Capabilities
+ , CapabilitiesGet         = CapabilitiesGet
+ , CapabilitiesSet         = CapabilitiesSet
+ , close                   = close
+ , String                  = String
+ , Octets                  = Octets
+ , Scalar                  = Scalar
+ , ObjectField             = ObjectField
+ , Object                  = Object
+ , Array                   = Array
+ , Any                     = Any
+ , Column                  = Column
+ , Projection              = Projection
+ , Collection              = Collection
+ , Limit                   = Limit
+ , Order                   = Order
+ , UpdateOperation         = UpdateOperation
+ , Find                    = Find
+ , Insert                  = Insert
+ , Update                  = Update
+ , Delete                  = Delete
+ , CreateView              = CreateView
+ , ModifyView              = ModifyView
+ , DropView                = DropView
+ , Open                    = Open
+ , Condition               = Condition
+ , Close                   = Close
+ , Expr                    = Expr
+ , Identifier              = Identifier
+ , DocumentPathItem        = DocumentPathItem
+ , ColumnIdentifier        = ColumnIdentifier
+ , FunctionCall            = FunctionCall
+ , Operator                = Operator
+ , ObjectExpr              = ObjectExpr
+ , ObjectFieldExpr         = ObjectFieldExpr
+ , ArrayExpr               = ArrayExpr
+ , Frame                   = Frame
+ , Warning                 = Warning
+ , SessionVariableChanged  = SessionVariableChanged
+ , SessionStateChanged     = SessionStateChanged
+ , FetchDoneMoreOutParams  = FetchDoneMoreOutParams
+ , FetchDoneMoreResultsets = FetchDoneMoreResultsets
+ , FetchDone               = FetchDone
+ , ColumnMetaData          = ColumnMetaData
+ , Row                     = Row
+ , AuthenticateStart       = AuthenticateStart
+ , AuthenticateContinue    = AuthenticateContinue
+ , AuthenticateOk          = AuthenticateOk
+ , Reset                   = Reset
+ , Close                   = Close
+ , StmtExecute             = StmtExecute
+ , StmtExecuteOk           = StmtExecuteOk
+ , clientmessagetype       = clientmessagetype
+ , servermessagetype       = servermessagetype
+ , Ok                      = Ok
+ , Error                   = Error
 }
 
 function get_server_or_client_msg(server_or_client, msg_type_no, tag_no) 
@@ -530,20 +671,20 @@ function get_server_or_client_msg(server_or_client, msg_type_no, tag_no)
 end
 
 function get_proto_field(server_or_client, msg_type_no, tag_no) 
-  info(string.format("[%s] msg_type_no(%d) tag_no(%d)",(server_or_client and "s-c" or "c->s"), msg_type_no, tag_no))
+  -- info(string.format("[%s] msg_type_no(%d) tag_no(%d)",(server_or_client and "s-c" or "c->s"), msg_type_no, tag_no))
   local msgtbl = server_or_client and servermessagetype or clientmessagetype 
   if msgtbl == nil then
-    info("no msgtbl")
+    -- info("no msgtbl")
     return f.pbitem
   end
   local msg_tbl_item = msgtbl[msg_type_no]["definition"]
   if msg_tbl_item == nil then
-    info("no definition")
+    -- info("no definition")
     return f.pbitem
   end
   local proto_field = msg_tbl_item[tag_no]["protofield"]
   if proto_field == nil then
-    info("no protofield")
+    -- info("no protofield")
     return f.pbitem
   end
   return proto_field 
@@ -687,6 +828,7 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
             po = po + acc
 
             ff = get_proto_field(direction, msg_type_num, tagno)
+            info(ff)
             item = payload:add(ff , msg_payload(item_offset, 1 + readsize + acc))
             item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
                          , po, wiretype, tagno, le, acc, va))
@@ -900,7 +1042,7 @@ function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtre
        -- info("*l_wire_type == 2")
        -- info(l_msg[l_tag_no])
        local l_type = l_msg[l_tag_no].type                              -- tag=1 --> l_type=string
-       info(string.format("*type(%s)", l_type))
+       -- info(string.format("*type(%s)", l_type))
        local le, acc, po, readsize = getLengthVal(l_pos, l_tvb)
        l_pos = l_pos + readsize
 
@@ -909,6 +1051,7 @@ function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtre
          local l_next_tvb = l_tvb(l_pos, acc)
          va = l_tvb(l_pos, acc) : string()
          l_pos = l_pos + acc
+         -- info(string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)" , po, l_wire_type, l_tag_no, le, acc, va))
          l_subtree
            :add(l_msg[l_tag_no].protofield, l_next_tvb)
            :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
@@ -918,10 +1061,10 @@ function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtre
          -- info("*recursive")
          local l_next_tvb = l_tvb(l_pos, acc)
          l_pos = l_pos + acc
-         -- info(l_msg[l_tag_no])
-         -- info(l_msg[l_tag_no].name)
-         -- info(l_msg[l_tag_no].type)
-         -- info(l_msg[l_tag_no].protofield)
+         info(l_msg[l_tag_no])
+         info(l_msg[l_tag_no].name)
+         info(l_msg[l_tag_no].type)
+         info(l_msg[l_tag_no].protofield)
          local l_next_msg = message_table[l_msg[l_tag_no].type]
          local l_next_subtree = l_subtree:add(l_msg[l_tag_no].protofield, l_next_tvb)
          processTree(l_next_tvb, l_next_msg, l_next_subtree, acc) 
