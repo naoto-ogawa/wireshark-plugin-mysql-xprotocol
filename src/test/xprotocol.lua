@@ -488,12 +488,18 @@ Error = {
 }
 Error[1].converter = enum_fun
 
+function is_num_or_str(v)
+  return type(v) == "number" or type(v) == "string"
+end
+
 function register_metatable(def_tbl, name)
    local meta = getmetatable(def_tbl)
    meta = meta and meta or {}
    meta["name"] =  name
+   meta["__concat"] = function(v1, v2) if is_num_or_str(v1) then return v1 .. name else return name .. v2 end end
    setmetatable(def_tbl, meta)
 end
+
 
 register_metatable(Capability,              "Capability")
 register_metatable(Capabilities,            "Capabilities")
@@ -552,6 +558,11 @@ register_metatable(clientmessagetype,       "clientmessagetype")
 register_metatable(servermessagetype,       "servermessagetype")
 register_metatable(Ok,                      "Ok")
 register_metatable(Error,                   "Error")
+
+function get_table_name(tbl)
+  return getmetatable(tbl).name
+end
+
 -- ====================================================================================== --
 -- end of data definition  --
 -- ====================================================================================== --
@@ -717,8 +728,12 @@ function get_proto_field(server_or_client, msg_type_no, tag_no)
   return proto_field 
 end
 
+function get_message(server_or_client, msg_type_num)
+  return server_or_client and servermessagetype[msg_type_num].definition or clientmessagetype[msg_type_num].definition
+end
+
 function get_message_name(server_or_client, msg_type_num)
-  return (tostring(server_or_client and servermessagetype[msg_type_num].name or clientmessagetype[msg_type_num].name))
+  return server_or_client and servermessagetype[msg_type_num].name or clientmessagetype[msg_type_num].name
 end
 
 function getMessageParts (offset, tvb)
@@ -861,8 +876,9 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
                          , po, wiretype, tagno, le, acc, va))
             -- recursive
             local next_tvb = msg_payload(item_offset + 1 + readsize, acc)
-            local next_msg = get_server_or_client_msg(direction, msg_type_num, tagno)
-            next_msg =  Capability -- debug
+            -- info("+++++" .. next_msg)
+            info("+++++" .. get_message(direction, msg_type_num) .. "xxx")
+            local next_msg = message_table[get_message(direction, msg_type_num)[tagno].type]
             processTree(next_tvb, next_msg, item, acc)
             
           end
@@ -911,7 +927,7 @@ end
 
 -- 0  1  2  3  4  5  6  7 
 -- 0 -1  1 -2  2 -3  3 -4
-function decodeZigzag(v)
+function decode_zigzag(v)
   if v % 2 == 0 then
     return (v / 2) 
   else
@@ -919,8 +935,8 @@ function decodeZigzag(v)
   end
 end
 
-function decodeBool(v)
-  v == 0 and "FALSE" or "TRUE"
+function decode_bool(v)
+  return v == 0 and "FALSE" or "TRUE"
 end
 
 -- state management
@@ -984,8 +1000,8 @@ function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtre
 
        if l_msg[l_tag_no].converter then
          val = l_msg[l_tag_no].converter(val) 
-       -- else
-       --
+       elseif l_msg[l_tag_no].type == "bool" then
+         val = decode_bool(val)
        end
 
        item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, l_wire_type, l_tag_no, tostring(val), acc))
