@@ -47,18 +47,17 @@ CapabilitiesGet = {
 CapabilitiesSet = {
   [1] = {attr = "repeated", type = "Capabilities" , name="capabilities", tag  = 1}
 }
-close = {
+ConClose = {
 }
 -- mysql_datatypes.proto
 String = {
-   [1] = {attr = "required" , type = "bytes"  , name="value" , tag = 1}
-  ,[2] = {attr = "optional" , type = "uint64" , name="collation"    , tag = 2}
+   [1] = {attr = "required" , type = "bytes"  , name="value"     , tag = 1}
+  ,[2] = {attr = "optional" , type = "uint64" , name="collation" , tag = 2}
 }
 Octets = {
    [1] = {attr = "required" , type = "bytes"  , name = "value"        , tag = 1}
   ,[2] = {attr = "optional" , type = "uint32" , name = "content_type" , tag = 2}
 }
-
 Scalar = {
   Type = {
      [1] = "V_SINT"
@@ -70,7 +69,7 @@ Scalar = {
     ,[7] = "V_BOOL"
     ,[8] = "V_STRING"
   }
-  ,[1] = {attr = "required" , type = "Type"   , name = "type"    , tag = 1}
+  ,[1] = {attr = "required" , type = "Type"   , name = "type"           , tag = 1}
   ,[2] = {attr = "optional" , type = "sint64" , name = "v_signed_int"   , tag = 2}
   ,[3] = {attr = "optional" , type = "uint64" , name = "v_unsigned_int" , tag = 3}
   ,[5] = {attr = "optional" , type = "Octets" , name = "v_octets"       , tag = 5}
@@ -78,7 +77,7 @@ Scalar = {
   ,[7] = {attr = "optional" , type = "float"  , name = "v_float"        , tag = 7}
   ,[8] = {attr = "optional" , type = "bool"   , name = "v_bool"         , tag = 8}
   ,[9] = {attr = "optional" , type = "String" , name = "v_string"       , tag = 9}
-  , enum_fun = function(v) return Scalar.Type[v] end
+  ,enum_fun = function(v) return Scalar.Type[v] end
 }
 Scalar[1].converter = Scalar.enum_fun
 
@@ -117,7 +116,7 @@ Column = {
 }
 Projection = {
   [1] = {attr = "required" , type = "Mysqlx.Expr.Expr" , name="source" , tag = 1}
- ,[2] = {attr = "optional" , type = "string" , name="alias" , tag = 2}
+ ,[2] = {attr = "optional" , type = "string"           , name="alias"  , tag = 2}
 }
 DataModel = {
   [1] = "DOCUMENT"
@@ -125,20 +124,20 @@ DataModel = {
  ,enum_fun = function(v) return DataModel[v] end
 }
 Collection = {
-  [1] = {attr = "required" , type = "string" , name="name" , tag = 1}
+  [1] = {attr = "required" , type = "string" , name="name"   , tag = 1}
  ,[2] = {attr = "optional" , type = "string" , name="schema" , tag = 2}
 }
 Limit = {
   [1] = {attr = "required" , type = "uint64" , name="row_count" , tag = 1}
- ,[2] = {attr = "optional" , type = "uint64" , name="offset" , tag = 2}
+ ,[2] = {attr = "optional" , type = "uint64" , name="offset"    , tag = 2}
 }
 Order = {
   Direction = {
     [1] = "ASC"
    ,[2] = "DESC"
   }
- ,[1] = {attr = "required" , type = "Mysqlx.Expr.Expr" , name="expr" , tag = 1}
- ,[2] = {attr = "optional" , type = "Direction" , name="direction" , tag = 2}
+ ,[1] = {attr = "required" , type = "Mysqlx.Expr.Expr" , name="expr"      , tag = 1}
+ ,[2] = {attr = "optional" , type = "Direction"        , name="direction" , tag = 2}
  ,enum_fun = function(v) return Order.Direction[v] end
 }
 Order[2].converter = Order.enum_fun
@@ -161,23 +160,23 @@ UpdateOperation = {
 UpdateOperation[2].converter = UpdateOperation.enum_fun
 
 Find = {
-  [2] = {attr = "required" , type = "Collection" , name="collection" , tag = 2}
- ,[3] = {attr = "optional" , type = "DataModel" , name="data_model" , tag = 3, converter = DataModel.enum_fun}
- ,[4] = {attr = "repeated" , type = "Projection" , name="projection" , tag = 4}
- ,[5] = {attr = "optional" , type = "Mysqlx.Expr.Expr" , name="criteria" , tag = 5}
+  [2]  = {attr = "required" , type = "Collection" , name="collection" , tag = 2}
+ ,[3]  = {attr = "optional" , type = "DataModel" , name="data_model" , tag = 3, converter = DataModel.enum_fun}
+ ,[4]  = {attr = "repeated" , type = "Projection" , name="projection" , tag = 4}
+ ,[5]  = {attr = "optional" , type = "Mysqlx.Expr.Expr" , name="criteria" , tag = 5}
  ,[11] = {attr = "repeated" , type = "Mysqlx.Datatypes.Scalar" , name="args" , tag = 11}
- ,[6] = {attr = "optional" , type = "Limit" , name="limit" , tag = 6}
- ,[7] = {attr = "repeated" , type = "Order" , name="order" , tag = 7}
- ,[8] = {attr = "repeated" , type = "Mysqlx.Expr.Expr" , name="grouping" , tag = 8}
- ,[9] = {attr = "optional" , type = "Mysqlx.Expr.Expr" , name="grouping_criteria" , tag = 9}
+ ,[6]  = {attr = "optional" , type = "Limit" , name="limit" , tag = 6}
+ ,[7]  = {attr = "repeated" , type = "Order" , name="order" , tag = 7}
+ ,[8]  = {attr = "repeated" , type = "Mysqlx.Expr.Expr" , name="grouping" , tag = 8}
+ ,[9]  = {attr = "optional" , type = "Mysqlx.Expr.Expr" , name="grouping_criteria" , tag = 9}
+}
+TypedRow = {
+  [1] = {attr = "repeated" , type = "Mysqlx.Expr.Expr" , name="field" , tag = 1}
 }
 Insert = {
   [1] = {attr = "required" , type = "Collection" , name="collection" , tag = 1}
  ,[2] = {attr = "optional" , type = "DataModel" , name="data_model" , tag = 2, converter = DataModel.enum_fun}
  ,[3] = {attr = "repeated" , type = "Column" , name="projection" , tag = 3}
- ,TypedRow = { -- TODO
-  [1] = {attr = "repeated" , type = "Mysqlx.Expr.Expr" , name="field" , tag = 1}
-}
  ,[4] = {attr = "repeated" , type = "TypedRow" , name="row" , tag = 4}
  ,[5] = {attr = "repeated" , type = "Mysqlx.Datatypes.Scalar" , name="args" , tag = 5}
 }
@@ -249,7 +248,7 @@ Condition = {
   ,enum_fun = function(v) return Condition.ConditionOperation[v] end
 }
 Condition[3].converter = enum_fun 
-Open = {
+ExpectOpen = {
   CtxOperation = {
     [0] = "EXPECT_CTX_COPY_PREV"
    ,[1] = "EXPECT_CTX_EMPTY"
@@ -258,8 +257,8 @@ Open = {
  ,[2] = {attr = "repeated" , type = "Condition" , name="cond" , tag = 2}
  ,enum_fun = function(v) return Open.CtxOperation[v] end
 }
-Open[1].converter = enum_fun
-Close = {
+ExpectOpen[1].converter = enum_fun
+ExpectClose = {
 }
 -- mysqlx_expr.proto
 Expr = {
@@ -357,14 +356,14 @@ SessionVariableChanged = {
 }
 SessionStateChanged = {
   Parameter = {
-    [1] = "CURRENT_SCHEMA"
-   ,[2] = "ACCOUNT_EXPIRED"
-   ,[3] = "GENERATED_INSERT_ID"
-   ,[4] = "ROWS_AFFECTED"
-   ,[5] = "ROWS_FOUND"
-   ,[6] = "ROWS_MATCHED"
-   ,[7] = "TRX_COMMITTED"
-   ,[9] = "TRX_ROLLEDBACK"
+    [1]  = "CURRENT_SCHEMA"
+   ,[2]  = "ACCOUNT_EXPIRED"
+   ,[3]  = "GENERATED_INSERT_ID"
+   ,[4]  = "ROWS_AFFECTED"
+   ,[5]  = "ROWS_FOUND"
+   ,[6]  = "ROWS_MATCHED"
+   ,[7]  = "TRX_COMMITTED"
+   ,[9]  = "TRX_ROLLEDBACK"
    ,[10] = "PRODUCED_MESSAGE"
    ,[11] = "CLIENT_ID_ASSIGNED"
   }
@@ -381,11 +380,11 @@ FetchDone = {
 }
 ColumnMetaData = {
   FieldType = {
-    [1] = "SINT"
-   ,[2] = "UINT"
-   ,[5] = "DOUBLE"
-   ,[6] = "FLOAT"
-   ,[7] = "BYTES"
+    [1]  = "SINT"
+   ,[2]  = "UINT"
+   ,[5]  = "DOUBLE"
+   ,[6]  = "FLOAT"
+   ,[7]  = "BYTES"
    ,[10] = "TIME"
    ,[12] = "DATETIME"
    ,[15] = "SET"
@@ -393,18 +392,18 @@ ColumnMetaData = {
    ,[17] = "BIT"
    ,[18] = "DECIMAL"
   }
- ,[1] = {attr = "required" , type = "FieldType" , name="type" , tag = 1}
- ,[2] = {attr = "optional" , type = "bytes" , name="name" , tag = 2}
- ,[3] = {attr = "optional" , type = "bytes" , name="original_name" , tag = 3}
- ,[4] = {attr = "optional" , type = "bytes" , name="table" , tag = 4}
- ,[5] = {attr = "optional" , type = "bytes" , name="original_table" , tag = 5}
- ,[6] = {attr = "optional" , type = "bytes" , name="schema" , tag = 6}
- ,[7] = {attr = "optional" , type = "bytes" , name="catalog" , tag = 7}
- ,[8] = {attr = "optional" , type = "uint64" , name="collation" , tag = 8}
- ,[9] = {attr = "optional" , type = "uint32" , name="fractional_digits" , tag = 9}
- ,[10] = {attr = "optional" , type = "uint32" , name="length" , tag = 10}
- ,[11] = {attr = "optional" , type = "uint32" , name="flags" , tag = 11}
- ,[12] = {attr = "optional" , type = "uint32" , name="content_type" , tag = 12}
+ ,[1]  = {attr = "required" , type = "FieldType" , name="type" , tag = 1}
+ ,[2]  = {attr = "optional" , type = "bytes"     , name="name" , tag = 2}
+ ,[3]  = {attr = "optional" , type = "bytes"     , name="original_name" , tag = 3}
+ ,[4]  = {attr = "optional" , type = "bytes"     , name="table" , tag = 4}
+ ,[5]  = {attr = "optional" , type = "bytes"     , name="original_table" , tag = 5}
+ ,[6]  = {attr = "optional" , type = "bytes"     , name="schema" , tag = 6}
+ ,[7]  = {attr = "optional" , type = "bytes"     , name="catalog" , tag = 7}
+ ,[8]  = {attr = "optional" , type = "uint64"    , name="collation" , tag = 8}
+ ,[9]  = {attr = "optional" , type = "uint32"    , name="fractional_digits" , tag = 9}
+ ,[10] = {attr = "optional" , type = "uint32"    , name="length" , tag = 10}
+ ,[11] = {attr = "optional" , type = "uint32"    , name="flags" , tag = 11}
+ ,[12] = {attr = "optional" , type = "uint32"    , name="content_type" , tag = 12}
  ,enum_fun = function(v) return ColumnMetaData.FieldType[v] end
 }
 ColumnMetaData[1].converter = enum_fun 
@@ -414,8 +413,8 @@ Row = {
 -- mysqlx_session.proto
 AuthenticateStart = {
   [1] = {attr = "required" , type = "string" , name="mech_name" , tag = 1}
- ,[2] = {attr = "optional" , type = "bytes" , name="auth_data" , tag = 2}
- ,[3] = {attr = "optional" , type = "bytes" , name="initial_response" , tag = 3}
+ ,[2] = {attr = "optional" , type = "bytes"  , name="auth_data" , tag = 2}
+ ,[3] = {attr = "optional" , type = "bytes"  , name="initial_response" , tag = 3}
 }
 AuthenticateContinue = {
   [1] = {attr = "required" , type = "bytes" , name="auth_data" , tag = 1}
@@ -423,9 +422,9 @@ AuthenticateContinue = {
 AuthenticateOk = {
   [1] = {attr = "optional" , type = "bytes" , name="auth_data" , tag = 1}
 }
-Reset = {
+SessReset = {
 }
-Close = {
+SessClose = {
 }
 -- mysqlx_sql.proto
 StmtExecute = {
@@ -438,39 +437,39 @@ StmtExecuteOk = {
 }
 -- mysqlx.proto
 clientmessagetype = {
-   [1]  = {name = "CON_CAPABILITIES_GET"       , definition = CapabilitiesGet }
-  ,[2]  = {name = "CON_CAPABILITIES_SET"       , definition = CapabilitiesSet }
-  ,[3]  = {name = "CON_CLOSE"                  , definition = nil }  -- TODO
-  ,[4]  = {name = "SESS_AUTHENTICATE_START"    , definition = nil }
-  ,[5]  = {name = "SESS_AUTHENTICATE_CONTINUE" , definition = nil }
-  ,[6]  = {name = "SESS_RESET"                 , definition = nil }
-  ,[7]  = {name = "SESS_CLOSE"                 , definition = nil }
-  ,[12] = {name = "SQL_STMT_EXECUTE"           , definition = nil }
-  ,[17] = {name = "CRUD_FIND"                  , definition = nil }
-  ,[18] = {name = "CRUD_INSERT"                , definition = nil }
-  ,[19] = {name = "CRUD_UPDATE"                , definition = nil }
-  ,[20] = {name = "CRUD_DELETE"                , definition = nil }
-  ,[24] = {name = "EXPECT_OPEN"                , definition = nil }
-  ,[25] = {name = "EXPECT_CLOSE"               , definition = nil }
-  ,[30] = {name = "CRUD_CREATE_VIEW"           , definition = nil }
-  ,[31] = {name = "CRUD_MODIFY_VIEW"           , definition = nil }
-  ,[32] = {name = "CRUD_DROP_VIEW"             , definition = nil }
+   [1]  = {name = "CON_CAPABILITIES_GET"       , definition = CapabilitiesGet      }
+  ,[2]  = {name = "CON_CAPABILITIES_SET"       , definition = CapabilitiesSet      }
+  ,[3]  = {name = "CON_CLOSE"                  , definition = ConClose             }
+  ,[4]  = {name = "SESS_AUTHENTICATE_START"    , definition = AuthenticateStart    }
+  ,[5]  = {name = "SESS_AUTHENTICATE_CONTINUE" , definition = AuthenticateContinue }
+  ,[6]  = {name = "SESS_RESET"                 , definition = SessReset            }
+  ,[7]  = {name = "SESS_CLOSE"                 , definition = SessClose            }
+  ,[12] = {name = "SQL_STMT_EXECUTE"           , definition = StmtExecute          }
+  ,[17] = {name = "CRUD_FIND"                  , definition = Find                 }
+  ,[18] = {name = "CRUD_INSERT"                , definition = Insert               }
+  ,[19] = {name = "CRUD_UPDATE"                , definition = Update               }
+  ,[20] = {name = "CRUD_DELETE"                , definition = Delete               }
+  ,[24] = {name = "EXPECT_OPEN"                , definition = ExpectOpen           }
+  ,[25] = {name = "EXPECT_CLOSE"               , definition = ExpectClose          }
+  ,[30] = {name = "CRUD_CREATE_VIEW"           , definition = CreateView           }
+  ,[31] = {name = "CRUD_MODIFY_VIEW"           , definition = ModifyView           }
+  ,[32] = {name = "CRUD_DROP_VIEW"             , definition = DropView             }
 }
 --
 servermessagetype = {
-   [0]  = {name = "OK"                                   , definition = nil  }
-  ,[1]  = {name = "ERROR"                                , definition = nil  }
-  ,[2]  = {name = "CONN_CAPABILITIES"                    , definition = Capabilities }
-  ,[3]  = {name = "SESS_AUTHENTICATE_CONTINUE"           , definition = nil  }
-  ,[4]  = {name = "SESS_AUTHENTICATE_OK"                 , definition = nil  }
-  ,[11] = {name = "NOTICE"                               , definition = nil  }
-  ,[12] = {name = "RESULTSET_COLUMN_META_DATA"           , definition = ColumnMetaData }
-  ,[13] = {name = "RESULTSET_ROW"                        , definition = nil  }
-  ,[14] = {name = "RESULTSET_FETCH_DONE"                 , definition = nil  }
-  ,[15] = {name = "RESULTSET_FETCH_SUSPENDED"            , definition = nil  }
-  ,[16] = {name = "RESULTSET_FETCH_DONE_MORE_RESULTSETS" , definition = nil  }
-  ,[17] = {name = "SQL_STMT_EXECUTE_OK"                  , definition = nil  }
-  ,[18] = {name = "RESULTSET_FETCH_DONE_MORE_OUT_PARAMS" , definition = nil  }
+   [0]  = {name = "OK"                                   , definition = Ok                      }
+  ,[1]  = {name = "ERROR"                                , definition = Error                   }
+  ,[2]  = {name = "CONN_CAPABILITIES"                    , definition = Capabilities            }
+  ,[3]  = {name = "SESS_AUTHENTICATE_CONTINUE"           , definition = AuthenticateContinue    }
+  ,[4]  = {name = "SESS_AUTHENTICATE_OK"                 , definition = AuthenticateOk          }
+  ,[11] = {name = "NOTICE"                               , definition = Condition               }
+  ,[12] = {name = "RESULTSET_COLUMN_META_DATA"           , definition = ColumnMetaData          }
+  ,[13] = {name = "RESULTSET_ROW"                        , definition = Row                     }
+  ,[14] = {name = "RESULTSET_FETCH_DONE"                 , definition = FetchDone               }
+  ,[15] = {name = "RESULTSET_FETCH_SUSPENDED"            , definition = nil                     } -- TODO
+  ,[16] = {name = "RESULTSET_FETCH_DONE_MORE_RESULTSETS" , definition = FetchDoneMoreResultsets }
+  ,[17] = {name = "SQL_STMT_EXECUTE_OK"                  , definition =  StmtExecuteOk          }
+  ,[18] = {name = "RESULTSET_FETCH_DONE_MORE_OUT_PARAMS" , definition = FetchDoneMoreOutParams  }
 } 
 Ok = {
   [1] = {attr = "optional" , type = "string", name ="msg" , tag  = 1}
@@ -480,10 +479,10 @@ Error = {
     [0] = "ERROR"
    ,[1] = "FATAL"
   }
-  ,[1] = {attr = "optional" , type = "Severity" , name="severity" , tag = 1}
-  ,[2] = {attr = "required" , type = "uint32" , name="code" , tag = 2}
-  ,[4] = {attr = "required" , type = "string" , name="sql_state" , tag = 4}
-  ,[3] = {attr = "required" , type = "string" , name="msg" , tag = 3}
+  ,[1] = {attr = "optional" , type = "Severity" , name="severity"  , tag = 1}
+  ,[2] = {attr = "required" , type = "uint32"   , name="code"      , tag = 2}
+  ,[3] = {attr = "required" , type = "string"   , name="msg"       , tag = 3}
+  ,[4] = {attr = "required" , type = "string"   , name="sql_state" , tag = 4}
   ,enum_fun = function(v) return Error.Severity[v] end
 }
 Error[1].converter = enum_fun
@@ -505,7 +504,7 @@ register_metatable(Capability,              "Capability")
 register_metatable(Capabilities,            "Capabilities")
 register_metatable(CapabilitiesGet,         "CapabilitiesGet")
 register_metatable(CapabilitiesSet,         "CapabilitiesSet")
-register_metatable(close,                   "close")
+register_metatable(ConClose,                "Conclose")
 register_metatable(String,                  "String")
 register_metatable(Octets,                  "Octets")
 register_metatable(Scalar,                  "Scalar")
@@ -520,6 +519,7 @@ register_metatable(Limit,                   "Limit")
 register_metatable(Order,                   "Order")
 register_metatable(UpdateOperation,         "UpdateOperation")
 register_metatable(Find,                    "Find")
+register_metatable(TypedRow,                "TypedRow")
 register_metatable(Insert,                  "Insert")
 register_metatable(Update,                  "Update")
 register_metatable(Delete,                  "Delete")
@@ -527,8 +527,8 @@ register_metatable(CreateView,              "CreateView")
 register_metatable(ModifyView,              "ModifyView")
 register_metatable(DropView,                "DropView")
 register_metatable(Condition,               "Condition")
-register_metatable(Open,                    "Open")
-register_metatable(Close,                   "Close")
+register_metatable(ExpectOpen,              "ExpectOpen")
+register_metatable(ExpectClose,             "ExpectClose")
 register_metatable(Expr,                    "Expr")
 register_metatable(Identifier,              "Identifier")
 register_metatable(DocumentPathItem,        "DocumentPathItem")
@@ -550,8 +550,8 @@ register_metatable(Row,                     "Row")
 register_metatable(AuthenticateStart,       "AuthenticateStart")
 register_metatable(AuthenticateContinue,    "AuthenticateContinue")
 register_metatable(AuthenticateOk,          "AuthenticateOk")
-register_metatable(Reset,                   "Reset")
-register_metatable(Close,                   "Close")
+register_metatable(SessReset,               "SessReset")
+register_metatable(SessClose,               "SessClose")
 register_metatable(StmtExecute,             "StmtExecute")
 register_metatable(StmtExecuteOk,           "StmtExecuteOk")
 register_metatable(clientmessagetype,       "clientmessagetype")
@@ -563,17 +563,12 @@ function get_table_name(tbl)
   return getmetatable(tbl).name
 end
 
--- ====================================================================================== --
--- end of data definition  --
--- ====================================================================================== --
-
 -- register field for each message
 function register_proto_field(def_tbl) 
   local tbl_name = getmetatable(def_tbl).name
   for key, msg in pairs(def_tbl) do 
      if (type(key) == "number") then
        local nm = def_tbl[key].name
-       -- info ("*" .. tbl_name .. "." .. nm)
        pField = ProtoField.new (msg.type .. "." .. nm, nm, ftypes.BYTES)
        f[tbl_name .. "." .. nm]   = pField
        msg["protofield"] = pField
@@ -585,7 +580,7 @@ register_proto_field(Capability)
 register_proto_field(Capabilities)
 register_proto_field(CapabilitiesGet)
 register_proto_field(CapabilitiesSet)
-register_proto_field(close)
+register_proto_field(ConClose)
 register_proto_field(String)
 register_proto_field(Octets)
 register_proto_field(Scalar)
@@ -600,15 +595,16 @@ register_proto_field(Limit)
 register_proto_field(Order)
 register_proto_field(UpdateOperation)
 register_proto_field(Find)
+register_proto_field(TypedRow)
 register_proto_field(Insert)
 register_proto_field(Update)
 register_proto_field(Delete)
 register_proto_field(CreateView)
 register_proto_field(ModifyView)
 register_proto_field(DropView)
-register_proto_field(Open)
 register_proto_field(Condition)
-register_proto_field(Close)
+register_proto_field(ExpectOpen)
+register_proto_field(ExpectClose)
 register_proto_field(Expr)
 register_proto_field(Identifier)
 register_proto_field(DocumentPathItem)
@@ -630,8 +626,8 @@ register_proto_field(Row)
 register_proto_field(AuthenticateStart)
 register_proto_field(AuthenticateContinue)
 register_proto_field(AuthenticateOk)
-register_proto_field(Reset)
-register_proto_field(Close)
+register_proto_field(SessReset)
+register_proto_field(SessClose)
 register_proto_field(StmtExecute)
 register_proto_field(StmtExecuteOk)
 -- register_proto_field(clientmessagetype)
@@ -645,7 +641,7 @@ message_table = {
  , Capabilities            = Capabilities
  , CapabilitiesGet         = CapabilitiesGet
  , CapabilitiesSet         = CapabilitiesSet
- , close                   = close
+ , ConClose                = ConClose
  , String                  = String
  , Octets                  = Octets
  , Scalar                  = Scalar
@@ -690,8 +686,8 @@ message_table = {
  , AuthenticateStart       = AuthenticateStart
  , AuthenticateContinue    = AuthenticateContinue
  , AuthenticateOk          = AuthenticateOk
- , Reset                   = Reset
- , Close                   = Close
+ , SessReset               = SessReset
+ , SessClose               = SessClose
  , StmtExecute             = StmtExecute
  , StmtExecuteOk           = StmtExecuteOk
  , clientmessagetype       = clientmessagetype
@@ -700,40 +696,40 @@ message_table = {
  , Error                   = Error
 }
 
-function get_server_or_client_msg(server_or_client, msg_type_no, tag_no) 
-  local msgtbl = server_or_client and servermessagetype or clientmessagetype 
-  if msgtbl == nil then
-    return nil 
-  end
-  return msgtbl[msg_type_no]
-end
+-- function get_server_or_client_msg(server_or_client, msg_type_no, tag_no) 
+--   local msgtbl = server_or_client and servermessagetype or clientmessagetype 
+--   if msgtbl == nil then
+--     return nil 
+--   end
+--   return msgtbl[msg_type_no]
+-- end
 
 function get_proto_field(server_or_client, msg_type_no, tag_no) 
-  -- info(string.format("[%s] msg_type_no(%d) tag_no(%d)",(server_or_client and "s-c" or "c->s"), msg_type_no, tag_no))
   local msgtbl = server_or_client and servermessagetype or clientmessagetype 
   if msgtbl == nil then
-    -- info("no msgtbl")
     return f.pbitem
   end
   local msg_tbl_item = msgtbl[msg_type_no]["definition"]
   if msg_tbl_item == nil then
-    -- info("no definition")
     return f.pbitem
   end
   local proto_field = msg_tbl_item[tag_no]["protofield"]
   if proto_field == nil then
-    -- info("no protofield")
     return f.pbitem
   end
   return proto_field 
 end
 
 function get_message(server_or_client, msg_type_num)
-  return server_or_client and servermessagetype[msg_type_num].definition or clientmessagetype[msg_type_num].definition
+  return server_or_client and servermessagetype[msg_type_num] or clientmessagetype[msg_type_num]
+end
+
+function get_message_definition(server_or_client, msg_type_num)
+  return get_message(server_or_client, msg_type_num).definition
 end
 
 function get_message_name(server_or_client, msg_type_num)
-  return server_or_client and servermessagetype[msg_type_num].name or clientmessagetype[msg_type_num].name
+  return get_message(server_or_client, msg_type_num).name
 end
 
 function getMessageParts (offset, tvb)
@@ -825,7 +821,7 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
 
   local subtree = tree:add (xproto, tvb())
 
-  local direction = (pinfo.src_port == p.server_port) and true or false
+  local direction = pinfo.src_port == p.server_port
   subtree:append_text (direction and " server -> client " or " client -> server ")
 
   local offset = 0
@@ -834,7 +830,6 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
   while offset < tvb:len() do
     messages = subtree:add (f.message, tvb(offset,5)) -- first 5 bytes (usually size and type) 
     offset, msg_size, payload_len, msg_type, msg_type_num, msg_payload = getMessageParts (offset, tvb)
-    -- info (string.format("**payload_len=%d, msg_type_num=%d, msg_payload=%s", payload_len, msg_type_num, msg_payload))
     if msg_size then
       messages
         :add (f.size, msg_size) 
@@ -868,17 +863,13 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
             va = msg_payload(po, acc) : string()
             po = po + acc
 
-            -- info (string.format("** %s, %d, %d", direction and "s" or "c", msg_type_num, tagno))
             ff = get_proto_field(direction, msg_type_num, tagno)
-            -- info (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)" , po, wiretype, tagno, le, acc, va))
             item = payload:add(ff , msg_payload(item_offset, 1 + readsize + acc))
             item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
                          , po, wiretype, tagno, le, acc, va))
             -- recursive
             local next_tvb = msg_payload(item_offset + 1 + readsize, acc)
-            -- info("+++++" .. next_msg)
-            info("+++++" .. get_message(direction, msg_type_num) .. "xxx")
-            local next_msg = message_table[get_message(direction, msg_type_num)[tagno].type]
+            local next_msg = message_table[get_message_definition(direction, msg_type_num)[tagno].type]
             processTree(next_tvb, next_msg, item, acc)
             
           end
@@ -889,19 +880,18 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
   end
 end
 
+DissectorTable.get("tcp.port"):add(p.server_port, xproto)
+
 -- lettle ending and 7bit each
 function getLengthVal(offset, tvb) 
   offsetstart = offset
   b = tvb(offset, 1)
   offset = offset + 1
   acc, base = getnumber(0, 1, b)
-  -- info(string.format("acc (%d), (%d), base (%d), bitfield (%d)", b:uint(), acc, base, b:bitfield(0,1)))
-  -- info( b:bitfield(0,1) == 1)
   while b:bitfield(0,1) == 1 do
     b = tvb(offset, 1)
     offset = offset + 1
     acc, base = getnumber(acc, base, b)
-    -- info(string.format("acc2 (%d), base (%d)", acc, base))
   end
   return b:uint(), acc, offset, (offset - offsetstart)
 end
@@ -972,10 +962,8 @@ function updateState(msg_size, payload_len, msg_type, msg_type_num, msg_payload)
 
 end
 
-DissectorTable.get("tcp.port"):add(p.server_port, xproto)
 
 function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtree
-  -- info(string.format("*processTree len (%d)", len))
   local l_pos = 0
   local l_tvb = tvb
   local l_msg = msg
@@ -986,18 +974,12 @@ function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtre
      local l_wire_type, l_tag_no, l_po = getwiretag(l_pos, l_tvb) 
      l_pos = l_pos + 1
 
-     -- info(string.format("*wire_type(%d), tag_no(%d)", l_wire_type, l_tag_no))
      if l_wire_type == 0 then
-       -- info("*l_wire_type == 0")
        local val, acc, po, readsize = getLengthVal(l_pos, l_tvb)
        l_pos = l_pos + readsize
-       -- info(string.format("val (%d)", val))
-       -- info(l_msg)
-       -- info(l_msg[l_tag_no])
-       -- info(l_msg[l_tag_no].protofield)
        item = l_subtree:add(l_msg[l_tag_no].protofield, l_tvb(l_pos - readsize , readsize))
-       -- TODO check type of a value, i.e. enum.
 
+       -- TODO check type of a value, i.e. enum.
        if l_msg[l_tag_no].converter then
          val = l_msg[l_tag_no].converter(val) 
        elseif l_msg[l_tag_no].type == "bool" then
@@ -1007,32 +989,22 @@ function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtre
        item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, l_wire_type, l_tag_no, tostring(val), acc))
 
      elseif l_wire_type == 2 then
-       -- info("*l_wire_type == 2")
-       -- info(l_msg[l_tag_no])
        local l_type = l_msg[l_tag_no].type 
-       -- info(string.format("*type(%s)", l_type))
        local le, acc, po, readsize = getLengthVal(l_pos, l_tvb)
        l_pos = l_pos + readsize
 
        if isTerminal(l_type) then
-         -- info("*isTerminal")
          local l_next_tvb = l_tvb(l_pos, acc)
          va = l_tvb(l_pos, acc) : string()
          l_pos = l_pos + acc
-         -- info(string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)" , po, l_wire_type, l_tag_no, le, acc, va))
          l_subtree
            :add(l_msg[l_tag_no].protofield, l_next_tvb)
            :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
                          , po, l_wire_type, l_tag_no, le, acc, va))
        else 
          -- recursive
-         -- info("*recursive")
          local l_next_tvb = l_tvb(l_pos, acc)
          l_pos = l_pos + acc
-         -- info(l_msg[l_tag_no])
-         -- info(l_msg[l_tag_no].name)
-         -- info(l_msg[l_tag_no].type)
-         -- info(l_msg[l_tag_no].protofield)
          local l_next_msg = message_table[l_msg[l_tag_no].type]
          local l_next_subtree = l_subtree:add(l_msg[l_tag_no].protofield, l_next_tvb)
          processTree(l_next_tvb, l_next_msg, l_next_subtree, acc) 
