@@ -958,6 +958,73 @@ end
 
 DissectorTable.get("tcp.port"):add(p.server_port, xproto)
 
+function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtree
+  -- info(string.format("*processTree len (%d)", len))
+  local l_pos = 0
+  local l_tvb = tvb
+  local l_msg = msg
+  local l_msg_len = tvb:len()
+  local l_subtree = subtree
+
+  while (l_pos < l_msg_len) do
+     local l_wire_type, l_tag_no, l_po = getwiretag(l_pos, l_tvb) 
+     l_pos = l_pos + 1
+
+     -- info(string.format("*wire_type(%d), tag_no(%d)", l_wire_type, l_tag_no))
+     if l_wire_type == 0 then
+       -- info("*l_wire_type == 0")
+       local val, acc, po, readsize = getLengthVal(l_pos, l_tvb)
+       l_pos = l_pos + readsize
+       -- info(string.format("val (%d)", val))
+       -- info(l_msg)
+       -- info(l_msg[l_tag_no])
+       -- info(l_msg[l_tag_no].protofield)
+       item = l_subtree:add(l_msg[l_tag_no].protofield, l_tvb(l_pos - readsize , readsize))
+       -- TODO check type of a value, i.e. enum.
+
+       if l_msg[l_tag_no].converter then
+         val = l_msg[l_tag_no].converter(val) 
+       -- else
+       --
+       end
+
+       item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, l_wire_type, l_tag_no, tostring(val), acc))
+
+     elseif l_wire_type == 2 then
+       -- info("*l_wire_type == 2")
+       -- info(l_msg[l_tag_no])
+       local l_type = l_msg[l_tag_no].type 
+       -- info(string.format("*type(%s)", l_type))
+       local le, acc, po, readsize = getLengthVal(l_pos, l_tvb)
+       l_pos = l_pos + readsize
+
+       if isTerminal(l_type) then
+         -- info("*isTerminal")
+         local l_next_tvb = l_tvb(l_pos, acc)
+         va = l_tvb(l_pos, acc) : string()
+         l_pos = l_pos + acc
+         -- info(string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)" , po, l_wire_type, l_tag_no, le, acc, va))
+         l_subtree
+           :add(l_msg[l_tag_no].protofield, l_next_tvb)
+           :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
+                         , po, l_wire_type, l_tag_no, le, acc, va))
+       else 
+         -- recursive
+         -- info("*recursive")
+         local l_next_tvb = l_tvb(l_pos, acc)
+         l_pos = l_pos + acc
+         -- info(l_msg[l_tag_no])
+         -- info(l_msg[l_tag_no].name)
+         -- info(l_msg[l_tag_no].type)
+         -- info(l_msg[l_tag_no].protofield)
+         local l_next_msg = message_table[l_msg[l_tag_no].type]
+         local l_next_subtree = l_subtree:add(l_msg[l_tag_no].protofield, l_next_tvb)
+         processTree(l_next_tvb, l_next_msg, l_next_subtree, acc) 
+       end
+
+     end
+  end
+end
 
 -- 0a 0000 1010 wire=2, tag=1
 -- cf 1100 1111 
@@ -1047,72 +1114,3 @@ DissectorTable.get("tcp.port"):add(p.server_port, xproto)
 -- 0f -> 15
 --
 -- 
-function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtree
-  -- info(string.format("*processTree len (%d)", len))
-  local l_pos = 0
-  local l_tvb = tvb
-  local l_msg = msg
-  local l_msg_len = tvb:len()
-  local l_subtree = subtree
-
-  while (l_pos < l_msg_len) do
-     local l_wire_type, l_tag_no, l_po = getwiretag(l_pos, l_tvb) 
-     l_pos = l_pos + 1
-
-     -- info(string.format("*wire_type(%d), tag_no(%d)", l_wire_type, l_tag_no))
-     if l_wire_type == 0 then
-       -- info("*l_wire_type == 0")
-       local val, acc, po, readsize = getLengthVal(l_pos, l_tvb)
-       l_pos = l_pos + readsize
-       -- info(string.format("val (%d)", val))
-       -- info(l_msg)
-       -- info(l_msg[l_tag_no])
-       -- info(l_msg[l_tag_no].protofield)
-       item = l_subtree:add(l_msg[l_tag_no].protofield, l_tvb(l_pos - readsize , readsize))
-       -- TODO check type of a value, i.e. enum.
-
-       if l_msg[l_tag_no].converter then
-         val = l_msg[l_tag_no].converter(val) 
-       -- else
-       --
-       end
-
-       item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, l_wire_type, l_tag_no, tostring(val), acc))
-
-     elseif l_wire_type == 2 then
-       -- info("*l_wire_type == 2")
-       -- info(l_msg[l_tag_no])
-       local l_type = l_msg[l_tag_no].type 
-       -- info(string.format("*type(%s)", l_type))
-       local le, acc, po, readsize = getLengthVal(l_pos, l_tvb)
-       l_pos = l_pos + readsize
-
-       if isTerminal(l_type) then
-         -- info("*isTerminal")
-         local l_next_tvb = l_tvb(l_pos, acc)
-         va = l_tvb(l_pos, acc) : string()
-         l_pos = l_pos + acc
-         -- info(string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)" , po, l_wire_type, l_tag_no, le, acc, va))
-         l_subtree
-           :add(l_msg[l_tag_no].protofield, l_next_tvb)
-           :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
-                         , po, l_wire_type, l_tag_no, le, acc, va))
-       else 
-         -- recursive
-         -- info("*recursive")
-         local l_next_tvb = l_tvb(l_pos, acc)
-         l_pos = l_pos + acc
-         -- info(l_msg[l_tag_no])
-         -- info(l_msg[l_tag_no].name)
-         -- info(l_msg[l_tag_no].type)
-         -- info(l_msg[l_tag_no].protofield)
-         local l_next_msg = message_table[l_msg[l_tag_no].type]
-         local l_next_subtree = l_subtree:add(l_msg[l_tag_no].protofield, l_next_tvb)
-         processTree(l_next_tvb, l_next_msg, l_next_subtree, acc) 
-       end
-
-     end
-  end
-end
-
-
