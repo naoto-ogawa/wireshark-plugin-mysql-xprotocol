@@ -350,7 +350,7 @@ Frame = {
  ,[1] = {attr = "required" , type = "uint32" , name="type"    , tag = 1}
  ,[2] = {attr = "optional" , type = "Scope"  , name="scope"   , tag = 2}
  ,[3] = {attr = "optional" , type = "bytes"  , name="payload" , tag = 3}
- ,enum_fun = function(v) return Frame.Scope[v] end
+ ,enum_fun = function(v) info("aaaaaaa");return Frame.Scope[v] end
 }
 Frame[2].converter = enum_fun
 Warning = {
@@ -477,7 +477,7 @@ servermessagetype = {
   ,[2]  = {name = "CONN_CAPABILITIES"                    , definition = Capabilities            }
   ,[3]  = {name = "SESS_AUTHENTICATE_CONTINUE"           , definition = AuthenticateContinue    }
   ,[4]  = {name = "SESS_AUTHENTICATE_OK"                 , definition = AuthenticateOk          }
-  ,[11] = {name = "NOTICE"                               , definition = Condition               }
+  ,[11] = {name = "NOTICE"                               , definition = Frame                   }
   ,[12] = {name = "RESULTSET_COLUMN_META_DATA"           , definition = ColumnMetaData          }
   ,[13] = {name = "RESULTSET_ROW"                        , definition = Row                     }
   ,[14] = {name = "RESULTSET_FETCH_DONE"                 , definition = FetchDone               }
@@ -740,8 +740,6 @@ function is_64bit(v)             return v == 1 end
 function is_length_delimited(v)  return v == 2 end 
 function is_32bit(v)             return v == 3 end 
 
-
-
 function get_message(server_or_client, msg_type_num)
   return server_or_client and servermessagetype[msg_type_num] or clientmessagetype[msg_type_num]
 end
@@ -850,11 +848,14 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
           wire_type , tag_no, po = get_wire_tag(po, msg_payload)
           local proto_field = get_proto_field(direction, msg_type_num, tag_no)
           if is_varint(wire_type) then
-            val, acc, po, readsize = get_length_val(po, msg_payload)
-           
-            item = payload:add(proto_field, msg_payload(item_offset, 1 + readsize))
-            item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%d) acc (%d)"
-                         , po, wire_type, tag_no, val, acc))
+            local msgtbl = server_or_client and servermessagetype or clientmessagetype 
+            local readsize = make_proto_field_varint(payload, po, msg_payload, wire_type, tag_no, msgtbl)
+            l_pos = l_pos + readsize 
+--            val, acc, po, readsize = get_length_val(po, msg_payload)
+--           
+--            item = payload:add(proto_field, msg_payload(item_offset, 1 + readsize))
+--            item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%d) acc (%d)"
+--                         , po, wire_type, tag_no, val, acc))
 
           elseif is_length_delimited(wire_type) then
             le, acc, po, readsize = get_length_val(po, msg_payload)
@@ -959,6 +960,20 @@ function update_state(msg_size, payload_len, msg_type, msg_type_num, msg_payload
 
 end
 
+function make_proto_field_varint(subtree, pos, tvb, wire_type, tag_no, msg)
+       local val, acc, po, readsize = get_length_val(pos, tvb)
+       pos = pos + readsize
+       item = subtree:add(msg[tag_no].protofield, tvb(pos - readsize , readsize))
+       -- TODO check type of a value, i.e. enum.
+       if msg[tag_no].converter then
+         val = msg[tag_no].converter(acc) 
+       elseif msg[tag_no].type == "bool" then
+         val = decode_bool(val)
+       end
+       item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, wire_type, tag_no, tostring(val), acc))
+       return readsize 
+end
+
 -- analyze data recursivly.
 function process_tree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtree
   local l_pos = 0
@@ -971,21 +986,32 @@ function process_tree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtr
      local l_wire_type, l_tag_no, l_po = get_wire_tag(l_pos, l_tvb) 
      l_pos = l_pos + 1
 
+     info(string.format("pos=%d, len=%d " , l_pos, len))
      if is_varint(l_wire_type) then
-       local val, acc, po, readsize = get_length_val(l_pos, l_tvb)
-       l_pos = l_pos + readsize
-       item = l_subtree:add(l_msg[l_tag_no].protofield, l_tvb(l_pos - readsize , readsize))
 
-       -- TODO check type of a value, i.e. enum.
-       if l_msg[l_tag_no].converter then
-         val = l_msg[l_tag_no].converter(acc) 
-       elseif l_msg[l_tag_no].type == "bool" then
-         val = decode_bool(val)
-       end
-
-       item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, l_wire_type, l_tag_no, tostring(val), acc))
+--            val, acc, po, readsize = get_length_val(po, msg_payload)
+--           
+--            item = payload:add(proto_field, msg_payload(item_offset, 1 + readsize))
+--            item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%d) acc (%d)"
+--                         , po, wire_type, tag_no, val, acc))
+          local readsize = make_proto_field_varint(l_subtree, l_pos, l_tvb, l_wire_type, l_tag_no, l_msg)
+          l_pos = l_pos + readsize 
+--        local val, acc, po, readsize = get_length_val(l_pos, l_tvb)
+--        l_pos = l_pos + readsize
+--        item = l_subtree:add(l_msg[l_tag_no].protofield, l_tvb(l_pos - readsize , readsize))
+-- 
+--        -- TODO check type of a value, i.e. enum.
+--        if l_msg[l_tag_no].converter then
+--          val = l_msg[l_tag_no].converter(acc) 
+--        elseif l_msg[l_tag_no].type == "bool" then
+--          val = decode_bool(val)
+--        end
+-- 
+--        item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, l_wire_type, l_tag_no, tostring(val), acc))
+ 
 
      elseif is_length_delimited(l_wire_type) then
+       info("eee")
        local l_type = l_msg[l_tag_no].type 
        local le, acc, po, readsize = get_length_val(l_pos, l_tvb)
        l_pos = l_pos + readsize
