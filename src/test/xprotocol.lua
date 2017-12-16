@@ -660,9 +660,9 @@ message_table = {
  , String                  = String
  , Octets                  = Octets
  , Scalar                  = Scalar
- , ObjectFieldAny             = ObjectFieldAny
- , ObjectAny                  = ObjectAny
- , ArrayAny                   = ArrayAny
+ , ObjectFieldAny          = ObjectFieldAny
+ , ObjectAny               = ObjectAny
+ , ArrayAny                = ArrayAny
  , Any                     = Any
  , Column                  = Column
  , Projection              = Projection
@@ -686,9 +686,9 @@ message_table = {
  , ColumnIdentifier        = ColumnIdentifier
  , FunctionCall            = FunctionCall
  , Operator                = Operator
- , Object              = Object
- , ObjectField         = ObjectField
- , Array               = Array
+ , Object                  = Object
+ , ObjectField             = ObjectField
+ , Array                   = Array
  , Frame                   = Frame
  , Warning                 = Warning
  , SessionVariableChanged  = SessionVariableChanged
@@ -726,6 +726,21 @@ function get_proto_field(server_or_client, msg_type_no, tag_no)
   end
   return proto_field 
 end
+
+-- https://developers.google.com/protocol-buffers/docs/encoding
+-- | Type | Meaning          | Used For
+-- | 0    | Varint           | int32, int64, uint32, uint64, sint32, sint64, bool, enum
+-- | 1    | 64-bit           | fixed64, sfixed64, double
+-- | 2    | Length-delimited | string, bytes, embedded messages, packed repeated fields
+-- | 3    | Start group      | groups (deprecated)
+-- | 4    | End group        | groups (deprecated)
+-- | 5    | 32-bit           | fixed32, sfixed32, float
+function is_varint(v)            return v == 0 end 
+function is_64bit(v)             return v == 1 end 
+function is_length_delimited(v)  return v == 2 end 
+function is_32bit(v)             return v == 3 end 
+
+
 
 function get_message(server_or_client, msg_type_num)
   return server_or_client and servermessagetype[msg_type_num] or clientmessagetype[msg_type_num]
@@ -831,7 +846,7 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
         while po < msg_payload :len() do
           item_offset = po
           wiretype , tagno, po = get_wire_tag(po, msg_payload)
-          if (wiretype == 0) then
+          if is_varint(wiretype) then
             val, acc, po, readsize = get_length_val(po, msg_payload)
            
             ff = get_proto_field(direction, msg_type_num, tagno)
@@ -839,7 +854,7 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
             item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%d) acc (%d)"
                          , po, wiretype, tagno, val, acc))
 
-          elseif (wiretype == 2) then
+          elseif is_length_delimited(wiretype) then
             le, acc, po, readsize = get_length_val(po, msg_payload)
             va = msg_payload(po, acc) : string()
             po = po + acc
@@ -955,7 +970,7 @@ function process_tree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtr
      local l_wire_type, l_tag_no, l_po = get_wire_tag(l_pos, l_tvb) 
      l_pos = l_pos + 1
 
-     if l_wire_type == 0 then
+     if is_varint(l_wire_type) then
        local val, acc, po, readsize = get_length_val(l_pos, l_tvb)
        l_pos = l_pos + readsize
        item = l_subtree:add(l_msg[l_tag_no].protofield, l_tvb(l_pos - readsize , readsize))
@@ -969,7 +984,7 @@ function process_tree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtr
 
        item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, l_wire_type, l_tag_no, tostring(val), acc))
 
-     elseif l_wire_type == 2 then
+     elseif is_length_delimited(l_wire_type) then
        local l_type = l_msg[l_tag_no].type 
        local le, acc, po, readsize = get_length_val(l_pos, l_tvb)
        l_pos = l_pos + readsize
