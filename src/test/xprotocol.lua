@@ -711,22 +711,6 @@ message_table = {
  , Error                   = Error
 }
 
-function get_proto_field(server_or_client, msg_type_no, tag_no) 
-  local msgtbl = server_or_client and servermessagetype or clientmessagetype 
-  if msgtbl == nil then
-    return f.pbitem
-  end
-  local msg_tbl_item = msgtbl[msg_type_no]["definition"]
-  if msg_tbl_item == nil then
-    return f.pbitem
-  end
-  local proto_field = msg_tbl_item[tag_no]["protofield"]
-  if proto_field == nil then
-    return f.pbitem
-  end
-  return proto_field 
-end
-
 -- https://developers.google.com/protocol-buffers/docs/encoding
 -- | Type | Meaning          | Used For
 -- | 0    | Varint           | int32, int64, uint32, uint64, sint32, sint64, bool, enum
@@ -847,27 +831,16 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
           local tag_no    = nil
           wire_type , tag_no, po = get_wire_tag(po, msg_payload)
           
-          info(string.format("@@ wire_type=%d, tag_no=%d", wire_type, tag_no))
 
-          local proto_field = get_proto_field(direction, msg_type_num, tag_no)
+          local next_msg = get_message_definition(direction, msg_type_num)
           if is_varint(wire_type) then
-            local next_msg = get_message_definition(direction, msg_type_num)
             local readsize = make_proto_field_varint(payload, po, msg_payload, wire_type, tag_no, next_msg)
             po = po + readsize 
 
           elseif is_length_delimited(wire_type) then
-            le, acc, po, readsize = get_length_val(po, msg_payload)
-            va = msg_payload(po, acc) : string()
-            po = po + acc
 
-            item = payload:add(proto_field , msg_payload(item_offset, 1 + readsize + acc))
-            item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
-                         , po, wire_type, tag_no, le, acc, va))
-            -- recursive
-            local next_tvb = msg_payload(item_offset + 1 + readsize, acc)
-            local next_msg = message_table[get_message_definition(direction, msg_type_num)[tag_no].type]
-            process_tree(next_tvb, next_msg, item, acc)
-            
+            local readsize =  make_proto_length_delimited(payload, po, msg_payload, wire_type, tag_no, next_msg)
+            po = po + readsize 
           end
         end
       end
@@ -881,9 +854,9 @@ DissectorTable.get("tcp.port"):add(p.server_port, xproto)
 -- lettle ending and 7bit each
 function get_length_val(offset, tvb) 
   offsetstart = offset
-  b = tvb(offset, 1)
+  local b = tvb(offset, 1)
   offset = offset + 1
-  acc, base = get_number(0, 1, b)
+  local acc, base = get_number(0, 1, b)
   while b:bitfield(0,1) == 1 do
     b = tvb(offset, 1)
     offset = offset + 1
@@ -959,19 +932,42 @@ function update_state(msg_size, payload_len, msg_type, msg_type_num, msg_payload
 end
 
 function make_proto_field_varint(subtree, pos, tvb, wire_type, tag_no, msg)
-   info(string.format("wire=%d, tag_no=%d, msg=%s", wire_type, tag_no, getmetatable(msg).name))
-   info(msg[tag_no].converter and "converter" or "no conv")
-       local val, acc, po, readsize = get_length_val(pos, tvb)
-       pos = pos + readsize
-       item = subtree:add(msg[tag_no].protofield, tvb(pos - readsize , readsize))
-       -- TODO check type of a value, i.e. enum.
-       if msg[tag_no].converter then
-         val = msg[tag_no].converter(acc) 
-       elseif msg[tag_no].type == "bool" then
-         val = decode_bool(val)
-       end
-       item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, wire_type, tag_no, tostring(val), acc))
-       return readsize 
+   local val, acc, po, readsize = get_length_val(pos, tvb)
+   pos = pos + readsize
+   item = subtree:add(msg[tag_no].protofield, tvb(pos - readsize , readsize))
+   -- TODO check type of a value, i.e. enum.
+   if msg[tag_no].converter then
+     val = msg[tag_no].converter(acc) 
+   elseif msg[tag_no].type == "bool" then
+     val = decode_bool(val)
+   end
+   item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, wire_type, tag_no, tostring(val), acc))
+   return readsize 
+end
+
+function make_proto_length_delimited(subtree, pos, tvb, wire_type, tag_no, msg)
+  local pos_s = pos
+  local le, acc, po, readsize = get_length_val(pos, tvb)
+  pos = pos + readsize
+
+  local type = msg[tag_no].type 
+  if is_terminal(type) then
+    local next_tvb = tvb(pos, acc)
+    va = tvb(pos, acc) : string()
+    pos = pos + acc
+    subtree
+      :add(msg[tag_no].protofield, next_tvb)
+      :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
+                    , po, wire_type, tag_no, le, acc, va))
+  else 
+    -- recursive
+    local next_tvb = tvb(pos, acc)
+    pos = pos + acc
+    local next_msg = message_table[msg[tag_no].type]
+    local next_subtree = subtree:add(msg[tag_no].protofield, next_tvb)
+    process_tree(next_tvb, next_msg, next_subtree, acc) 
+  end
+  return pos - pos_s
 end
 
 -- analyze data recursivly.
@@ -989,36 +985,20 @@ function process_tree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtr
      info(string.format("pos=%d, len=%d " , l_pos, len))
      if is_varint(l_wire_type) then
 
-          local readsize = make_proto_field_varint(l_subtree, l_pos, l_tvb, l_wire_type, l_tag_no, l_msg)
-          l_pos = l_pos + readsize 
+        local readsize = make_proto_field_varint(l_subtree, l_pos, l_tvb, l_wire_type, l_tag_no, l_msg)
+        l_pos = l_pos + readsize 
 
      elseif is_length_delimited(l_wire_type) then
-       info("eee")
-       local l_type = l_msg[l_tag_no].type 
-       local le, acc, po, readsize = get_length_val(l_pos, l_tvb)
-       l_pos = l_pos + readsize
-
-       if is_terminal(l_type) then
-         local l_next_tvb = l_tvb(l_pos, acc)
-         va = l_tvb(l_pos, acc) : string()
-         l_pos = l_pos + acc
-         l_subtree
-           :add(l_msg[l_tag_no].protofield, l_next_tvb)
-           :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
-                         , po, l_wire_type, l_tag_no, le, acc, va))
-       else 
-         -- recursive
-         local l_next_tvb = l_tvb(l_pos, acc)
-         l_pos = l_pos + acc
-         local l_next_msg = message_table[l_msg[l_tag_no].type]
-         local l_next_subtree = l_subtree:add(l_msg[l_tag_no].protofield, l_next_tvb)
-         process_tree(l_next_tvb, l_next_msg, l_next_subtree, acc) 
-       end
+        local readsize =  make_proto_length_delimited(l_subtree, l_pos, l_tvb, l_wire_type, l_tag_no, l_msg)
+        l_pos = l_pos + readsize 
 
      end
   end
 end
 
+-- info(string.format("@@ wire_type=%d, tag_no=%d", wire_type, tag_no))
+
+--
 -- 0a 0000 1010 wire=2, tag=1
 -- cf 1100 1111 
 -- 02 0000 0010  -> 10 1001111
@@ -1066,7 +1046,9 @@ end
 --  50 0101 0000  wire=0, tag=10
 --  58 0101 1000  wire=0, tag=11
 --  60 0110 0000  wire=0, tag=12
--- 
+--
+--  0a 0000 1010  wire0,  tag=2
+
 --  3f 0011 1111
 --
 --  ff ff ff ff 0f = 11111111 11111111 11111111 11111111 00001111
