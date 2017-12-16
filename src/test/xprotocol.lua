@@ -5,16 +5,12 @@ require "alien"
 
 local xproto = Proto ("XProtocol", "X Protocol Dissector");
 
-local packet_cnt
-
 function xproto.init () 
-  packet_cnt = 0
-  initState()
+  init_state()
 end
 
 -- Preferences
 local p = xproto.prefs
-
 p.server_port = Pref.uint ("server port", 8000, "server port number") -- TODO 33060 should be default
 
 
@@ -25,7 +21,26 @@ f.message   = ProtoField.bytes  ("XProtocol.message"   , "Message"    )
 f.size      = ProtoField.bytes  ("XProtocol.size"      , "Size"       )
 f.tipe      = ProtoField.bytes  ("XProtocol.type"      , "Type"       )
 f.payload   = ProtoField.bytes  ("XProtocol.payload"   , "Payload"    )
-f.pbitem    = ProtoField.bytes  ("XProtocol.pbitem"    , "proto item" )
+f.pbitem    = ProtoField.bytes  ("XProtocol.pbitem"    , "proto item" ) -- default , fail safe
+
+-- protocol buffer data type
+terminal_type = {
+   "double"
+  ,"float"
+  ,"int32"
+  ,"int64"
+  ,"uint32"
+  ,"uint64"
+  ,"sint32"
+  ,"sint64"
+  ,"fixed32"
+  ,"fixed64"
+  ,"sfixed32"
+  ,"sfixed64"
+  ,"bool"
+  ,"string"
+  ,"bytes"
+}
 
 -- state between packets -- TODO not good state management, we need to consider each item is divided between packet.
 state = {
@@ -81,16 +96,16 @@ Scalar = {
 }
 Scalar[1].converter = Scalar.enum_fun
 
-ObjectField = {
+ObjectFieldAny = {
    [1] = {attr = "required" , type = "string", name = "key"   , tag = 1}
   ,[2] = {attr = "required" , type = "Any"   , name = "value" , tag = 2}
 }
 
-Object = {
-  [1] = {attr = "repeated" , type = "ObjectField", name = "fld", tag = 1}
+ObjectAny = {
+  [1] = {attr = "repeated" , type = "ObjectFieldAny", name = "fld", tag = 1}
 }
 
-Array = {
+ArrayAny = {
   [1] = {attr = "repeated" , type = "Any", name = "value", tag = 1}
 }
 
@@ -100,23 +115,23 @@ Any = {
     ,[2] = "OBJECT"
     ,[3] = "ARRAY"
   }
-  , [1] = {attr = "required" , type = "Type"   , name = "type"   , tag = 1}
-  , [2] = {attr = "optional" , type = "Scalar" , name = "scalar" , tag = 2}
-  , [3] = {attr = "optional" , type = "Object" , name = "obj"    , tag = 3}
-  , [4] = {attr = "optional" , type = "Array"  , name = "array"  , tag = 4}
+  , [1] = {attr = "required" , type = "Type"      , name = "type"   , tag = 1}
+  , [2] = {attr = "optional" , type = "Scalar"    , name = "scalar" , tag = 2}
+  , [3] = {attr = "optional" , type = "ObjectAny" , name = "obj"    , tag = 3}
+  , [4] = {attr = "optional" , type = "ArrayAny"  , name = "array"  , tag = 4}
   , enum_fun = function(v) return Any.Type[v] end
 }
 Any[1].converter = Any.enum_fun
 
 -- mysqlx_crud.proto
 Column = {
-  [1] = {attr = "optional" , type = "string" , name="name" , tag = 1}
- ,[2] = {attr = "optional" , type = "string" , name="alias" , tag = 2}
- ,[3] = {attr = "repeated" , type = "Mysqlx.Expr.DocumentPathItem" , name="document_path" , tag = 3}
+   [1] = {attr = "optional", type = "string",           name="name",          tag = 1}
+ , [2] = {attr = "optional", type = "string",           name="alias",         tag = 2}
+ , [3] = {attr = "repeated", type = "DocumentPathItem", name="document_path", tag = 3}
 }
 Projection = {
-  [1] = {attr = "required" , type = "Mysqlx.Expr.Expr" , name="source" , tag = 1}
- ,[2] = {attr = "optional" , type = "string"           , name="alias"  , tag = 2}
+   [1] = {attr = "required", type = "Expr",   name="source", tag = 1}
+ , [2] = {attr = "optional", type = "string", name="alias",  tag = 2}
 }
 DataModel = {
   [1] = "DOCUMENT"
@@ -136,9 +151,9 @@ Order = {
     [1] = "ASC"
    ,[2] = "DESC"
   }
- ,[1] = {attr = "required" , type = "Mysqlx.Expr.Expr" , name="expr"      , tag = 1}
- ,[2] = {attr = "optional" , type = "Direction"        , name="direction" , tag = 2}
- ,enum_fun = function(v) return Order.Direction[v] end
+ , [1] = {attr = "required", type = "Expr",      name="expr",      tag = 1}
+ , [2] = {attr = "optional", type = "Direction", name="direction", tag = 2}
+ , enum_fun = function(v) return Order.Direction[v] end
 }
 Order[2].converter = Order.enum_fun
 
@@ -152,48 +167,48 @@ UpdateOperation = {
    ,[6] = "ARRAY_INSERT"
    ,[7] = "ARRAY_APPEND"
   }
- ,[1] = {attr = "required" , type = "Mysqlx.Expr.ColumnIdentifier" , name="source" , tag = 1}
- ,[2] = {attr = "required" , type = "UpdateType" , name="operation" , tag = 2}
- ,[3] = {attr = "optional" , type = "Mysqlx.Expr.Expr" , name="value" , tag = 3}
- ,enum_fun = function(v) return UpdateOperation.UpdateType[v] end
+ , [1] = {attr = "required", type = "ColumnIdentifier", name="source",    tag = 1}
+ , [2] = {attr = "required", type = "UpdateType",       name="operation", tag = 2}
+ , [3] = {attr = "optional", type = "Expr",             name="value",     tag = 3}
+ , enum_fun = function(v) return UpdateOperation.UpdateType[v] end
 }
 UpdateOperation[2].converter = UpdateOperation.enum_fun
 
 Find = {
-  [2]  = {attr = "required" , type = "Collection" , name="collection" , tag = 2}
- ,[3]  = {attr = "optional" , type = "DataModel" , name="data_model" , tag = 3, converter = DataModel.enum_fun}
- ,[4]  = {attr = "repeated" , type = "Projection" , name="projection" , tag = 4}
- ,[5]  = {attr = "optional" , type = "Mysqlx.Expr.Expr" , name="criteria" , tag = 5}
- ,[11] = {attr = "repeated" , type = "Mysqlx.Datatypes.Scalar" , name="args" , tag = 11}
- ,[6]  = {attr = "optional" , type = "Limit" , name="limit" , tag = 6}
- ,[7]  = {attr = "repeated" , type = "Order" , name="order" , tag = 7}
- ,[8]  = {attr = "repeated" , type = "Mysqlx.Expr.Expr" , name="grouping" , tag = 8}
- ,[9]  = {attr = "optional" , type = "Mysqlx.Expr.Expr" , name="grouping_criteria" , tag = 9}
+   [2]  = {attr = "required", type = "Collection", name="collection",        tag = 2}
+ , [3]  = {attr = "optional", type = "DataModel",  name="data_model",        tag = 3, converter = DataModel.enum_fun}
+ , [4]  = {attr = "repeated", type = "Projection", name="projection",        tag = 4}
+ , [5]  = {attr = "optional", type = "Expr",       name="criteria",          tag = 5}
+ , [11] = {attr = "repeated", type = "Scalar",     name="args",              tag = 11}
+ , [6]  = {attr = "optional", type = "Limit",      name="limit",             tag = 6}
+ , [7]  = {attr = "repeated", type = "Order",      name="order",             tag = 7}
+ , [8]  = {attr = "repeated", type = "Expr",       name="grouping",          tag = 8}
+ , [9]  = {attr = "optional", type = "Expr",       name="grouping_criteria", tag = 9}
 }
 TypedRow = {
-  [1] = {attr = "repeated" , type = "Mysqlx.Expr.Expr" , name="field" , tag = 1}
+  [1] = {attr = "repeated" , type = "Expr" , name="field" , tag = 1}
 }
 Insert = {
-  [1] = {attr = "required" , type = "Collection" , name="collection" , tag = 1}
- ,[2] = {attr = "optional" , type = "DataModel" , name="data_model" , tag = 2, converter = DataModel.enum_fun}
- ,[3] = {attr = "repeated" , type = "Column" , name="projection" , tag = 3}
- ,[4] = {attr = "repeated" , type = "TypedRow" , name="row" , tag = 4}
- ,[5] = {attr = "repeated" , type = "Mysqlx.Datatypes.Scalar" , name="args" , tag = 5}
+   [1] = {attr = "required", type = "Collection", name="collection", tag = 1}
+ , [2] = {attr = "optional", type = "DataModel",  name="data_model", tag = 2, converter = DataModel.enum_fun}
+ , [3] = {attr = "repeated", type = "Column",     name="projection", tag = 3}
+ , [4] = {attr = "repeated", type = "TypedRow",   name="row",        tag = 4}
+ , [5] = {attr = "repeated", type = "Scalar",     name="args",       tag = 5}
 }
 Update = {
-  [2] = {attr = "required" , type = "Collection" , name="collection" , tag = 2}
- ,[3] = {attr = "optional" , type = "DataModel" , name="data_model" , tag = 3, converter = DataModel.enum_fun}
- ,[4] = {attr = "optional" , type = "Mysqlx.Expr.Expr" , name="criteria" , tag = 4}
- ,[8] = {attr = "repeated" , type = "Mysqlx.Datatypes.Scalar" , name="args" , tag = 8}
- ,[5] = {attr = "optional" , type = "Limit" , name="limit" , tag = 5}
- ,[6] = {attr = "repeated" , type = "Order" , name="order" , tag = 6}
- ,[7] = {attr = "repeated" , type = "UpdateOperation" , name="operation" , tag = 7}
+   [2] = {attr = "required", type = "Collection",      name="collection", tag = 2}
+ , [3] = {attr = "optional", type = "DataModel",       name="data_model", tag = 3, converter = DataModel.enum_fun}
+ , [4] = {attr = "optional", type = "Expr",            name="criteria",   tag = 4}
+ , [8] = {attr = "repeated", type = "Scalar",          name="args",       tag = 8}
+ , [5] = {attr = "optional", type = "Limit",           name="limit",      tag = 5}
+ , [6] = {attr = "repeated", type = "Order",           name="order",      tag = 6}
+ , [7] = {attr = "repeated", type = "UpdateOperation", name="operation",  tag = 7}
 }
 Delete = {
   [1] = {attr = "required" , type = "Collection" , name="collection" , tag = 1}
  ,[2] = {attr = "optional" , type = "DataModel" , name="data_model" , tag = 2, converter = DataModel.enum_fun}
- ,[3] = {attr = "optional" , type = "Mysqlx.Expr.Expr" , name="criteria" , tag = 3}
- ,[6] = {attr = "repeated" , type = "Mysqlx.Datatypes.Scalar" , name="args" , tag = 6}
+ ,[3] = {attr = "optional" , type = "Expr" , name="criteria" , tag = 3}
+ ,[6] = {attr = "repeated" , type = "Scalar" , name="args" , tag = 6}
  ,[4] = {attr = "optional" , type = "Limit" , name="limit" , tag = 4}
  ,[5] = {attr = "repeated" , type = "Order" , name="order" , tag = 5}
 }
@@ -214,27 +229,27 @@ ViewCheckOption = {
  ,enum_fun = function(v) return ViewCheckOption[v] end
 }
 CreateView = {
-  [1] = {attr = "required" , type = "Collection" , name="collection" , tag = 1}
- ,[2] = {attr = "optional" , type = "string" , name="definer" , tag = 2}
- ,[3] = {attr = "optional" , type = "ViewAlgorithm" , name="algorithm" , tag = 3, converter = ViewAlgorithm.enum_fun}
- ,[4] = {attr = "optional" , type = "ViewSqlSecurity" , name="security" , tag = 4, converter = ViewSqlSecurity.enum_fun}
- ,[5] = {attr = "optional" , type = "ViewCheckOption" , name="check" , tag = 5, converter = ViewCheckOption.enum_fun}
- ,[6] = {attr = "repeated" , type = "string" , name="column" , tag = 6}
- ,[7] = {attr = "required" , type = "Find" , name="stmt" , tag = 7}
- ,[8] = {attr = "optional" , type = "bool" , name="replace_existing" , tag = 8}
+   [1] = {attr = "required", type = "Collection",      name="collection",       tag = 1}
+ , [2] = {attr = "optional", type = "string",          name="definer",          tag = 2}
+ , [3] = {attr = "optional", type = "ViewAlgorithm",   name="algorithm",        tag = 3, converter = ViewAlgorithm.enum_fun}
+ , [4] = {attr = "optional", type = "ViewSqlSecurity", name="security",         tag = 4, converter = ViewSqlSecurity.enum_fun}
+ , [5] = {attr = "optional", type = "ViewCheckOption", name="check",            tag = 5, converter = ViewCheckOption.enum_fun}
+ , [6] = {attr = "repeated", type = "string",          name="column",           tag = 6}
+ , [7] = {attr = "required", type = "Find",            name="stmt",             tag = 7}
+ , [8] = {attr = "optional", type = "bool",            name="replace_existing", tag = 8}
 }
 ModifyView = {
-  [1] = {attr = "required" , type = "Collection" , name="collection" , tag = 1}
- ,[2] = {attr = "optional" , type = "string" , name="definer" , tag = 2}
- ,[3] = {attr = "optional" , type = "ViewAlgorithm" , name="algorithm" , tag = 3, converter = ViewAlgorithm.enum_fun}
- ,[4] = {attr = "optional" , type = "ViewSqlSecurity" , name="security" , tag = 4, converter = ViewSqlSecurity.enum_fun}
- ,[5] = {attr = "optional" , type = "ViewCheckOption" , name="check" , tag = 5, converter = ViewCheckOption.enum_fun}
- ,[6] = {attr = "repeated" , type = "string" , name="column" , tag = 6}
- ,[7] = {attr = "optional" , type = "Find" , name="stmt" , tag = 7}
+   [1] = {attr = "required", type = "Collection",      name="collection", tag = 1}
+ , [2] = {attr = "optional", type = "string",          name="definer",    tag = 2}
+ , [3] = {attr = "optional", type = "ViewAlgorithm",   name="algorithm",  tag = 3, converter = ViewAlgorithm.enum_fun}
+ , [4] = {attr = "optional", type = "ViewSqlSecurity", name="security",   tag = 4, converter = ViewSqlSecurity.enum_fun}
+ , [5] = {attr = "optional", type = "ViewCheckOption", name="check",      tag = 5, converter = ViewCheckOption.enum_fun}
+ , [6] = {attr = "repeated", type = "string",          name="column",     tag = 6}
+ , [7] = {attr = "optional", type = "Find",            name="stmt",       tag = 7}
 }
 DropView = {
   [1] = {attr = "required" , type = "Collection" , name="collection" , tag = 1}
- ,[2] = {attr = "optional" , type = "bool" , name="if_exists" , tag = 2}
+ ,[2] = {attr = "optional" , type = "bool"       , name="if_exists"  , tag = 2}
 }
 -- mysqlx_expect.proto
 Condition = {
@@ -242,7 +257,7 @@ Condition = {
     [0] = "EXPECT_OP_SET"
    ,[1] = "EXPECT_OP_UNSET"
   }
-  ,[1] = {attr = "required" , type = "uint32" , name="condition_key" , tag = 1}
+  ,[1] = {attr = "required" , type = "uint32" , name="condition_key"  , tag = 1}
   ,[2] = {attr = "optional" , type = "bytes" , name="condition_value" , tag = 2}
   ,[3] = {attr = "optional" , type = "ConditionOperation" , name="op" , tag = 3}
   ,enum_fun = function(v) return Condition.ConditionOperation[v] end
@@ -253,8 +268,8 @@ ExpectOpen = {
     [0] = "EXPECT_CTX_COPY_PREV"
    ,[1] = "EXPECT_CTX_EMPTY"
   }
- ,[1] = {attr = "optional" , type = "CtxOperation" , name="op" , tag = 1}
- ,[2] = {attr = "repeated" , type = "Condition" , name="cond" , tag = 2}
+ ,[1] = {attr = "optional" , type = "CtxOperation" , name="op"   , tag = 1}
+ ,[2] = {attr = "repeated" , type = "Condition"    , name="cond" , tag = 2}
  ,enum_fun = function(v) return Open.CtxOperation[v] end
 }
 ExpectOpen[1].converter = enum_fun
@@ -272,20 +287,20 @@ Expr = {
    ,[7] = "OBJECT"
    ,[8] = "ARRAY"
   }
- ,[1] = {attr = "required" , type = "Type" , name="type" , tag = 1}
- ,[2] = {attr = "optional" , type = "ColumnIdentifier" , name="identifier" , tag = 2}
- ,[3] = {attr = "optional" , type = "string" , name="variable" , tag = 3}
- ,[4] = {attr = "optional" , type = "Mysqlx.Datatypes.Scalar" , name="literal" , tag = 4}
- ,[5] = {attr = "optional" , type = "FunctionCall" , name="function_call" , tag = 5}
- ,[6] = {attr = "optional" , type = "Operator" , name="operator" , tag = 6}
- ,[7] = {attr = "optional" , type = "uint32" , name="position" , tag = 7}
- ,[8] = {attr = "optional" , type = "ObjectExpr" , name="object" , tag = 8}
- ,[9] = {attr = "optional" , type = "ArrayExpr" , name="array" , tag = 9}
+ ,[1] = {attr = "required" , type = "Type"             , name="type"          , tag = 1}
+ ,[2] = {attr = "optional" , type = "ColumnIdentifier" , name="identifier"    , tag = 2}
+ ,[3] = {attr = "optional" , type = "string"           , name="variable"      , tag = 3}
+ ,[4] = {attr = "optional" , type = "Scalar"           , name="literal"       , tag = 4}
+ ,[5] = {attr = "optional" , type = "FunctionCall"     , name="function_call" , tag = 5}
+ ,[6] = {attr = "optional" , type = "Operator"         , name="operator"      , tag = 6}
+ ,[7] = {attr = "optional" , type = "uint32"           , name="position"      , tag = 7}
+ ,[8] = {attr = "optional" , type = "Object"           , name="object"        , tag = 8}
+ ,[9] = {attr = "optional" , type = "Array"            , name="array"         , tag = 9}
  ,enum_fun = function(v) return Expr.Type[v] end
 }
 Expr[1].converter = enum_fun
 Identifier = {
-  [1] = {attr = "required" , type = "string" , name="name" , tag = 1}
+  [1] = {attr = "required" , type = "string" , name="name"        , tag = 1}
  ,[2] = {attr = "optional" , type = "string" , name="schema_name" , tag = 2}
 }
 DocumentPathItem = {
@@ -296,34 +311,34 @@ DocumentPathItem = {
    ,[4] = "ARRAY_INDEX_ASTERISK"
    ,[5] = "DOUBLE_ASTERISK"
   }
- ,[1] = {attr = "required" , type = "Type" , name="type" , tag = 1}
+ ,[1] = {attr = "required" , type = "Type"   , name="type" , tag = 1}
  ,[2] = {attr = "optional" , type = "string" , name="value" , tag = 2}
  ,[3] = {attr = "optional" , type = "uint32" , name="index" , tag = 3}
  ,enum_fun = function(v) return DocumentPathItem.Type[v] end
 }
 DocumentPathItem[1].converter = enum_fun 
 ColumnIdentifier = {
-  [1] = {attr = "repeated" , type = "Mysqlx.Expr.DocumentPathItem" , name="document_path" , tag = 1}
- ,[2] = {attr = "optional" , type = "string" , name="name" , tag = 2}
- ,[3] = {attr = "optional" , type = "string" , name="table_name" , tag = 3}
- ,[4] = {attr = "optional" , type = "string" , name="schema_name" , tag = 4}
+  [1] = {attr = "repeated" , type = "DocumentPathItem" , name="document_path" , tag = 1}
+ ,[2] = {attr = "optional" , type = "string"           , name="name"          , tag = 2}
+ ,[3] = {attr = "optional" , type = "string"           , name="table_name"    , tag = 3}
+ ,[4] = {attr = "optional" , type = "string"           , name="schema_name"   , tag = 4}
 }
 FunctionCall = {
-  [1] = {attr = "required" , type = "Identifier" , name="name" , tag = 1}
- ,[2] = {attr = "repeated" , type = "Expr" , name="param" , tag = 2}
+  [1] = {attr = "required" , type = "Identifier" , name="name"  , tag = 1}
+ ,[2] = {attr = "repeated" , type = "Expr"       , name="param" , tag = 2}
 }
 Operator = {
   [1] = {attr = "required" , type = "string" , name="name" , tag = 1}
- ,[2] = {attr = "repeated" , type = "Expr" , name="param" , tag = 2}
+ ,[2] = {attr = "repeated" , type = "Expr"   , name="param" , tag = 2}
 }
-ObjectFieldExpr = {
+ObjectField = {
   [1] = {attr = "required" , type = "string" , name="key" , tag = 1}
- ,[2] = {attr = "required" , type = "Expr" , name="value" , tag = 2}
+ ,[2] = {attr = "required" , type = "Expr"   , name="value" , tag = 2}
 }
-ObjectExpr = {
-  [1] = {attr = "repeated" , type = "ObjectFieldExpr" , name="fld" , tag = 1}
+Object = {
+  [1] = {attr = "repeated" , type = "ObjectField" , name="fld" , tag = 1}
 }
-ArrayExpr = {
+Array = {
   [1] = {attr = "repeated" , type = "Expr" , name="value" , tag = 1}
 }
 -- mysqlx_notice.proto
@@ -332,9 +347,9 @@ Frame = {
     [1] = "GLOBAL"
    ,[2] = "LOCAL"
   }
- ,[1] = {attr = "required" , type = "uint32" , name="type" , tag = 1}
- ,[2] = {attr = "optional" , type = "Scope" , name="scope" , tag = 2}
- ,[3] = {attr = "optional" , type = "bytes" , name="payload" , tag = 3}
+ ,[1] = {attr = "required" , type = "uint32" , name="type"    , tag = 1}
+ ,[2] = {attr = "optional" , type = "Scope"  , name="scope"   , tag = 2}
+ ,[3] = {attr = "optional" , type = "bytes"  , name="payload" , tag = 3}
  ,enum_fun = function(v) return Frame.Scope[v] end
 }
 Frame[2].converter = enum_fun
@@ -344,15 +359,15 @@ Warning = {
    ,[2] = "WARNING"
    ,[3] = "ERROR"
   }
- ,[1] = {attr = "optional" , type = "Level" , name="level" , tag = 1}
- ,[2] = {attr = "required" , type = "uint32" , name="code" , tag = 2}
- ,[3] = {attr = "required" , type = "string" , name="msg" , tag = 3}
+ ,[1] = {attr = "optional" , type = "Level"  , name="level" , tag = 1}
+ ,[2] = {attr = "required" , type = "uint32" , name="code"  , tag = 2}
+ ,[3] = {attr = "required" , type = "string" , name="msg"   , tag = 3}
  ,enum_fun = function(v) return Warning.Level[v] end
 }
 Warning[1].converter = enum_fun
 SessionVariableChanged = {
   [1] = {attr = "required" , type = "string" , name="param" , tag = 1}
- ,[2] = {attr = "optional" , type = "Mysqlx.Datatypes.Scalar" , name="value" , tag = 2}
+ ,[2] = {attr = "optional" , type = "Scalar" , name="value" , tag = 2}
 }
 SessionStateChanged = {
   Parameter = {
@@ -368,7 +383,7 @@ SessionStateChanged = {
    ,[11] = "CLIENT_ID_ASSIGNED"
   }
  ,[1] = {attr = "required" , type = "Parameter" , name="param" , tag = 1}
- ,[2] = {attr = "optional" , type = "Mysqlx.Datatypes.Scalar" , name="value" , tag = 2}
+ ,[2] = {attr = "optional" , type = "Scalar"    , name="value" , tag = 2}
  ,enum_fun = function(v) return SessionStateChanged.Parameter[v] end
 }
 -- mysqlx_resultset.proto
@@ -392,18 +407,18 @@ ColumnMetaData = {
    ,[17] = "BIT"
    ,[18] = "DECIMAL"
   }
- ,[1]  = {attr = "required" , type = "FieldType" , name="type" , tag = 1}
- ,[2]  = {attr = "optional" , type = "bytes"     , name="name" , tag = 2}
- ,[3]  = {attr = "optional" , type = "bytes"     , name="original_name" , tag = 3}
- ,[4]  = {attr = "optional" , type = "bytes"     , name="table" , tag = 4}
- ,[5]  = {attr = "optional" , type = "bytes"     , name="original_table" , tag = 5}
- ,[6]  = {attr = "optional" , type = "bytes"     , name="schema" , tag = 6}
- ,[7]  = {attr = "optional" , type = "bytes"     , name="catalog" , tag = 7}
- ,[8]  = {attr = "optional" , type = "uint64"    , name="collation" , tag = 8}
+ ,[1]  = {attr = "required" , type = "FieldType" , name="type"              , tag = 1}
+ ,[2]  = {attr = "optional" , type = "bytes"     , name="name"              , tag = 2}
+ ,[3]  = {attr = "optional" , type = "bytes"     , name="original_name"     , tag = 3}
+ ,[4]  = {attr = "optional" , type = "bytes"     , name="table"             , tag = 4}
+ ,[5]  = {attr = "optional" , type = "bytes"     , name="original_table"    , tag = 5}
+ ,[6]  = {attr = "optional" , type = "bytes"     , name="schema"            , tag = 6}
+ ,[7]  = {attr = "optional" , type = "bytes"     , name="catalog"           , tag = 7}
+ ,[8]  = {attr = "optional" , type = "uint64"    , name="collation"         , tag = 8}
  ,[9]  = {attr = "optional" , type = "uint32"    , name="fractional_digits" , tag = 9}
- ,[10] = {attr = "optional" , type = "uint32"    , name="length" , tag = 10}
- ,[11] = {attr = "optional" , type = "uint32"    , name="flags" , tag = 11}
- ,[12] = {attr = "optional" , type = "uint32"    , name="content_type" , tag = 12}
+ ,[10] = {attr = "optional" , type = "uint32"    , name="length"            , tag = 10}
+ ,[11] = {attr = "optional" , type = "uint32"    , name="flags"             , tag = 11}
+ ,[12] = {attr = "optional" , type = "uint32"    , name="content_type"      , tag = 12}
  ,enum_fun = function(v) return ColumnMetaData.FieldType[v] end
 }
 ColumnMetaData[1].converter = enum_fun 
@@ -412,8 +427,8 @@ Row = {
 }
 -- mysqlx_session.proto
 AuthenticateStart = {
-  [1] = {attr = "required" , type = "string" , name="mech_name" , tag = 1}
- ,[2] = {attr = "optional" , type = "bytes"  , name="auth_data" , tag = 2}
+  [1] = {attr = "required" , type = "string" , name="mech_name"        , tag = 1}
+ ,[2] = {attr = "optional" , type = "bytes"  , name="auth_data"        , tag = 2}
  ,[3] = {attr = "optional" , type = "bytes"  , name="initial_response" , tag = 3}
 }
 AuthenticateContinue = {
@@ -428,10 +443,10 @@ SessClose = {
 }
 -- mysqlx_sql.proto
 StmtExecute = {
-  [1] = {attr = "required" , type = "bytes" , name="stmt" , tag = 1}
- ,[2] = {attr = "repeated" , type = "Mysqlx.Datatypes.Any" , name="args" , tag = 2}
- ,[3] = {attr = "optional" , type = "string" , name="namespace" , tag = 3}
- ,[4] = {attr = "optional" , type = "bool" , name="compact_metadata" , tag = 4}
+  [1] = {attr = "required" , type = "bytes"   , name="stmt"            , tag = 1}
+ ,[2] = {attr = "repeated" , type = "Any"    , name="args"             , tag = 2}
+ ,[3] = {attr = "optional" , type = "string" , name="namespace"        , tag = 3}
+ ,[4] = {attr = "optional" , type = "bool"   , name="compact_metadata" , tag = 4}
 }
 StmtExecuteOk = {
 }
@@ -508,9 +523,9 @@ register_metatable(ConClose,                "Conclose")
 register_metatable(String,                  "String")
 register_metatable(Octets,                  "Octets")
 register_metatable(Scalar,                  "Scalar")
-register_metatable(ObjectField,             "ObjectField")
-register_metatable(Object,                  "Object")
-register_metatable(Array,                   "Array")
+register_metatable(ObjectFieldAny,          "ObjectFieldAny")
+register_metatable(ObjectAny,               "ObjectAny")
+register_metatable(ArrayAny,                "ArrayAny")
 register_metatable(Any,                     "Any")
 register_metatable(Column,                  "Column")
 register_metatable(Projection,              "Projection")
@@ -535,9 +550,9 @@ register_metatable(DocumentPathItem,        "DocumentPathItem")
 register_metatable(ColumnIdentifier,        "ColumnIdentifier")
 register_metatable(FunctionCall,            "FunctionCall")
 register_metatable(Operator,                "Operator")
-register_metatable(ObjectFieldExpr,         "ObjectFieldExpr")
-register_metatable(ObjectExpr,              "ObjectExpr")
-register_metatable(ArrayExpr,               "ArrayExpr")
+register_metatable(ObjectField,             "ObjectField")
+register_metatable(Object,                  "Object")
+register_metatable(Array,                   "Array")
 register_metatable(Frame,                   "Frame")
 register_metatable(Warning,                 "Warning")
 register_metatable(SessionVariableChanged,  "SessionVariableChanged")
@@ -584,9 +599,9 @@ register_proto_field(ConClose)
 register_proto_field(String)
 register_proto_field(Octets)
 register_proto_field(Scalar)
-register_proto_field(ObjectField)
-register_proto_field(Object)
-register_proto_field(Array)
+register_proto_field(ObjectFieldAny)
+register_proto_field(ObjectAny)
+register_proto_field(ArrayAny)
 register_proto_field(Any)
 register_proto_field(Column)
 register_proto_field(Projection)
@@ -611,9 +626,9 @@ register_proto_field(DocumentPathItem)
 register_proto_field(ColumnIdentifier)
 register_proto_field(FunctionCall)
 register_proto_field(Operator)
-register_proto_field(ObjectExpr)
-register_proto_field(ObjectFieldExpr)
-register_proto_field(ArrayExpr)
+register_proto_field(Object)
+register_proto_field(ObjectField)
+register_proto_field(Array)
 register_proto_field(Frame)
 register_proto_field(Warning)
 register_proto_field(SessionVariableChanged)
@@ -645,9 +660,9 @@ message_table = {
  , String                  = String
  , Octets                  = Octets
  , Scalar                  = Scalar
- , ObjectField             = ObjectField
- , Object                  = Object
- , Array                   = Array
+ , ObjectFieldAny             = ObjectFieldAny
+ , ObjectAny                  = ObjectAny
+ , ArrayAny                   = ArrayAny
  , Any                     = Any
  , Column                  = Column
  , Projection              = Projection
@@ -671,9 +686,9 @@ message_table = {
  , ColumnIdentifier        = ColumnIdentifier
  , FunctionCall            = FunctionCall
  , Operator                = Operator
- , ObjectExpr              = ObjectExpr
- , ObjectFieldExpr         = ObjectFieldExpr
- , ArrayExpr               = ArrayExpr
+ , Object              = Object
+ , ObjectField         = ObjectField
+ , Array               = Array
  , Frame                   = Frame
  , Warning                 = Warning
  , SessionVariableChanged  = SessionVariableChanged
@@ -695,14 +710,6 @@ message_table = {
  , Ok                      = Ok
  , Error                   = Error
 }
-
--- function get_server_or_client_msg(server_or_client, msg_type_no, tag_no) 
---   local msgtbl = server_or_client and servermessagetype or clientmessagetype 
---   if msgtbl == nil then
---     return nil 
---   end
---   return msgtbl[msg_type_no]
--- end
 
 function get_proto_field(server_or_client, msg_type_no, tag_no) 
   local msgtbl = server_or_client and servermessagetype or clientmessagetype 
@@ -732,7 +739,7 @@ function get_message_name(server_or_client, msg_type_num)
   return get_message(server_or_client, msg_type_num).name
 end
 
-function getMessageParts (offset, tvb)
+function get_size_type_payload (offset, tvb)
   -- size
   local msg_size
   local payload_len
@@ -776,24 +783,6 @@ function getMessageParts (offset, tvb)
   return offset, msg_size, payload_len, msg_type, msg_type_num, msg_payload
 end
 
-terminal_type = {
-   "double"
-  ,"float"
-  ,"int32"
-  ,"int64"
-  ,"uint32"
-  ,"uint64"
-  ,"sint32"
-  ,"sint64"
-  ,"fixed32"
-  ,"fixed64"
-  ,"sfixed32"
-  ,"sfixed64"
-  ,"bool"
-  ,"string"
-  ,"bytes"
-}
-
 -- https://stackoverflow.com/questions/33510736/check-if-array-contains-specific-value
 function has_value (tab, val)
     for index, value in ipairs(tab) do
@@ -804,20 +793,12 @@ function has_value (tab, val)
     return false
 end
 
-function isTerminal(val) 
+function is_terminal(val) 
   return has_value(terminal_type, val)
 end
 
-info ("================================================================")
-info (" start" )
-info ("================================================================")
-
---
--- dissector
---
 function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
   pinfo.cols.protocol = "XPROTO"
-  packet_cnt = packet_cnt + 1
 
   local subtree = tree:add (xproto, tvb())
 
@@ -829,7 +810,7 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
 
   while offset < tvb:len() do
     messages = subtree:add (f.message, tvb(offset,5)) -- first 5 bytes (usually size and type) 
-    offset, msg_size, payload_len, msg_type, msg_type_num, msg_payload = getMessageParts (offset, tvb)
+    offset, msg_size, payload_len, msg_type, msg_type_num, msg_payload = get_size_type_payload (offset, tvb)
     if msg_size then
       messages
         :add (f.size, msg_size) 
@@ -846,12 +827,12 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
       payload = messages:add (f.payload, msg_payload) 
       payload:append_text (string.format(" length (%d)", msg_payload:len()))
       if msg_payload :len() > 0 then
-        po = 0
+        local po = 0
         while po < msg_payload :len() do
           item_offset = po
-          wiretype , tagno, po = getwiretag(po, msg_payload)
+          wiretype , tagno, po = get_wire_tag(po, msg_payload)
           if (wiretype == 0) then
-            val, acc, po, readsize = getLengthVal(po, msg_payload)
+            val, acc, po, readsize = get_length_val(po, msg_payload)
            
             ff = get_proto_field(direction, msg_type_num, tagno)
             item = payload:add(ff, msg_payload(item_offset, 1 + readsize))
@@ -859,7 +840,7 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
                          , po, wiretype, tagno, val, acc))
 
           elseif (wiretype == 2) then
-            le, acc, po, readsize = getLengthVal(po, msg_payload)
+            le, acc, po, readsize = get_length_val(po, msg_payload)
             va = msg_payload(po, acc) : string()
             po = po + acc
 
@@ -870,34 +851,34 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
             -- recursive
             local next_tvb = msg_payload(item_offset + 1 + readsize, acc)
             local next_msg = message_table[get_message_definition(direction, msg_type_num)[tagno].type]
-            processTree(next_tvb, next_msg, item, acc)
+            process_tree(next_tvb, next_msg, item, acc)
             
           end
         end
       end
     end
-    updateState(msg_size, payload_len, msg_type, msg_type_num, msg_payload)
+    update_state(msg_size, payload_len, msg_type, msg_type_num, msg_payload)
   end
 end
 
 DissectorTable.get("tcp.port"):add(p.server_port, xproto)
 
 -- lettle ending and 7bit each
-function getLengthVal(offset, tvb) 
+function get_length_val(offset, tvb) 
   offsetstart = offset
   b = tvb(offset, 1)
   offset = offset + 1
-  acc, base = getnumber(0, 1, b)
+  acc, base = get_number(0, 1, b)
   while b:bitfield(0,1) == 1 do
     b = tvb(offset, 1)
     offset = offset + 1
-    acc, base = getnumber(acc, base, b)
+    acc, base = get_number(acc, base, b)
   end
   return b:uint(), acc, offset, (offset - offsetstart)
 end
 
 -- @param val value to be analyzed.
-function getnumber(acc, base, val) 
+function get_number(acc, base, val) 
   for i=7, 1, -1 do                -- ignore MSB
     if val :bitfield(i,1) == 1 then
       acc = acc + (2^(base-1))
@@ -907,7 +888,7 @@ function getnumber(acc, base, val)
   return acc, base
 end
 
-function getwiretag(offset, tvb) 
+function get_wire_tag(offset, tvb) 
   local key  = tvb(offset, 1) :uint()  -- TODO check length
   local wire = bit32.band(key, 7)      -- TODO check value
   local tag  = bit32.rshift(key,3)     -- TODO check value
@@ -930,16 +911,16 @@ function decode_bool(v)
 end
 
 -- state management
-function initState()
+function init_state()
   state.payload_len  = nil
   state.msg_type_num = nil
   state.msg_payload  = nil
 end
 
-function updateState(msg_size, payload_len, msg_type, msg_type_num, msg_payload)
+function update_state(msg_size, payload_len, msg_type, msg_type_num, msg_payload)
 
   if msg_size ~= nil and msg_type ~= nil and msg_payload ~= nil then
-    initState()
+    init_state()
     return
   end 
 
@@ -958,12 +939,12 @@ function updateState(msg_size, payload_len, msg_type, msg_type_num, msg_payload)
   end 
 
   -- TODO error message
-  initState()
+  init_state()
 
 end
 
-
-function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtree
+-- analyze data recursivly.
+function process_tree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtree
   local l_pos = 0
   local l_tvb = tvb
   local l_msg = msg
@@ -971,17 +952,17 @@ function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtre
   local l_subtree = subtree
 
   while (l_pos < l_msg_len) do
-     local l_wire_type, l_tag_no, l_po = getwiretag(l_pos, l_tvb) 
+     local l_wire_type, l_tag_no, l_po = get_wire_tag(l_pos, l_tvb) 
      l_pos = l_pos + 1
 
      if l_wire_type == 0 then
-       local val, acc, po, readsize = getLengthVal(l_pos, l_tvb)
+       local val, acc, po, readsize = get_length_val(l_pos, l_tvb)
        l_pos = l_pos + readsize
        item = l_subtree:add(l_msg[l_tag_no].protofield, l_tvb(l_pos - readsize , readsize))
 
        -- TODO check type of a value, i.e. enum.
        if l_msg[l_tag_no].converter then
-         val = l_msg[l_tag_no].converter(val) 
+         val = l_msg[l_tag_no].converter(acc) 
        elseif l_msg[l_tag_no].type == "bool" then
          val = decode_bool(val)
        end
@@ -990,10 +971,10 @@ function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtre
 
      elseif l_wire_type == 2 then
        local l_type = l_msg[l_tag_no].type 
-       local le, acc, po, readsize = getLengthVal(l_pos, l_tvb)
+       local le, acc, po, readsize = get_length_val(l_pos, l_tvb)
        l_pos = l_pos + readsize
 
-       if isTerminal(l_type) then
+       if is_terminal(l_type) then
          local l_next_tvb = l_tvb(l_pos, acc)
          va = l_tvb(l_pos, acc) : string()
          l_pos = l_pos + acc
@@ -1007,7 +988,7 @@ function processTree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtre
          l_pos = l_pos + acc
          local l_next_msg = message_table[l_msg[l_tag_no].type]
          local l_next_subtree = l_subtree:add(l_msg[l_tag_no].protofield, l_next_tvb)
-         processTree(l_next_tvb, l_next_msg, l_next_subtree, acc) 
+         process_tree(l_next_tvb, l_next_msg, l_next_subtree, acc) 
        end
 
      end
