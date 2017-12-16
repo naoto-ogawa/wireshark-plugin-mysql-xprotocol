@@ -824,7 +824,7 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
   local msg_size, payload_len, msg_type, msg_type_num, msg_payload
 
   while offset < tvb:len() do
-    messages = subtree:add (f.message, tvb(offset,5)) -- first 5 bytes (usually size and type) 
+    local messages = subtree:add (f.message, tvb(offset,5)) -- first 5 bytes (usually size and type) 
     offset, msg_size, payload_len, msg_type, msg_type_num, msg_payload = get_size_type_payload (offset, tvb)
     if msg_size then
       messages
@@ -839,33 +839,34 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
         :append_text (get_message_name(direction, msg_type_num))
     end
     if msg_payload then 
-      payload = messages:add (f.payload, msg_payload) 
+      local payload = messages:add (f.payload, msg_payload) 
       payload:append_text (string.format(" length (%d)", msg_payload:len()))
       if msg_payload :len() > 0 then
         local po = 0
         while po < msg_payload :len() do
-          item_offset = po
-          wiretype , tagno, po = get_wire_tag(po, msg_payload)
-          if is_varint(wiretype) then
+          local item_offset = po
+          local wire_type = nil
+          local tag_no    = nil
+          wire_type , tag_no, po = get_wire_tag(po, msg_payload)
+          local proto_field = get_proto_field(direction, msg_type_num, tag_no)
+          if is_varint(wire_type) then
             val, acc, po, readsize = get_length_val(po, msg_payload)
            
-            ff = get_proto_field(direction, msg_type_num, tagno)
-            item = payload:add(ff, msg_payload(item_offset, 1 + readsize))
+            item = payload:add(proto_field, msg_payload(item_offset, 1 + readsize))
             item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%d) acc (%d)"
-                         , po, wiretype, tagno, val, acc))
+                         , po, wire_type, tag_no, val, acc))
 
-          elseif is_length_delimited(wiretype) then
+          elseif is_length_delimited(wire_type) then
             le, acc, po, readsize = get_length_val(po, msg_payload)
             va = msg_payload(po, acc) : string()
             po = po + acc
 
-            ff = get_proto_field(direction, msg_type_num, tagno)
-            item = payload:add(ff , msg_payload(item_offset, 1 + readsize + acc))
+            item = payload:add(proto_field , msg_payload(item_offset, 1 + readsize + acc))
             item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
-                         , po, wiretype, tagno, le, acc, va))
+                         , po, wire_type, tag_no, le, acc, va))
             -- recursive
             local next_tvb = msg_payload(item_offset + 1 + readsize, acc)
-            local next_msg = message_table[get_message_definition(direction, msg_type_num)[tagno].type]
+            local next_msg = message_table[get_message_definition(direction, msg_type_num)[tag_no].type]
             process_tree(next_tvb, next_msg, item, acc)
             
           end
