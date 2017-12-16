@@ -452,39 +452,39 @@ StmtExecuteOk = {
 }
 -- mysqlx.proto
 clientmessagetype = {
-   [1]  = {name = "CON_CAPABILITIES_GET"       , definition = CapabilitiesGet      }
-  ,[2]  = {name = "CON_CAPABILITIES_SET"       , definition = CapabilitiesSet      }
-  ,[3]  = {name = "CON_CLOSE"                  , definition = ConClose             }
-  ,[4]  = {name = "SESS_AUTHENTICATE_START"    , definition = AuthenticateStart    }
-  ,[5]  = {name = "SESS_AUTHENTICATE_CONTINUE" , definition = AuthenticateContinue }
-  ,[6]  = {name = "SESS_RESET"                 , definition = SessReset            }
-  ,[7]  = {name = "SESS_CLOSE"                 , definition = SessClose            }
-  ,[12] = {name = "SQL_STMT_EXECUTE"           , definition = StmtExecute          }
-  ,[17] = {name = "CRUD_FIND"                  , definition = Find                 }
-  ,[18] = {name = "CRUD_INSERT"                , definition = Insert               }
-  ,[19] = {name = "CRUD_UPDATE"                , definition = Update               }
-  ,[20] = {name = "CRUD_DELETE"                , definition = Delete               }
-  ,[24] = {name = "EXPECT_OPEN"                , definition = ExpectOpen           }
-  ,[25] = {name = "EXPECT_CLOSE"               , definition = ExpectClose          }
-  ,[30] = {name = "CRUD_CREATE_VIEW"           , definition = CreateView           }
-  ,[31] = {name = "CRUD_MODIFY_VIEW"           , definition = ModifyView           }
-  ,[32] = {name = "CRUD_DROP_VIEW"             , definition = DropView             }
+    [1]  = {name = "CON_CAPABILITIES_GET",       type = "CapabilitiesGet",      }
+  , [2]  = {name = "CON_CAPABILITIES_SET",       type = "CapabilitiesSet",      }
+  , [3]  = {name = "CON_CLOSE",                  type = "ConClose",             }
+  , [4]  = {name = "SESS_AUTHENTICATE_START",    type = "AuthenticateStart",    }
+  , [5]  = {name = "SESS_AUTHENTICATE_CONTINUE", type = "AuthenticateContinue", }
+  , [6]  = {name = "SESS_RESET",                 type = "SessReset",            }
+  , [7]  = {name = "SESS_CLOSE",                 type = "SessClose",            }
+  , [12] = {name = "SQL_STMT_EXECUTE",           type = "StmtExecute ",         }
+  , [17] = {name = "CRUD_FIND",                  type = "Find",                 }
+  , [18] = {name = "CRUD_INSERT",                type = "Insert",               }
+  , [19] = {name = "CRUD_UPDATE",                type = "Update",               }
+  , [20] = {name = "CRUD_DELETE",                type = "Delete",               }
+  , [24] = {name = "EXPECT_OPEN",                type = "ExpectOpen",           }
+  , [25] = {name = "EXPECT_CLOSE",               type = "ExpectClose",          }
+  , [30] = {name = "CRUD_CREATE_VIEW",           type = "CreateView",           }
+  , [31] = {name = "CRUD_MODIFY_VIEW",           type = "ModifyView",           }
+  , [32] = {name = "CRUD_DROP_VIEW",             type = "DropView",             }
 }
 --
 servermessagetype = {
-   [0]  = {name = "OK"                                   , type = "Ok" , definition = Ok                      }
-  ,[1]  = {name = "ERROR"                                , type = "Error" , definition = Error                   }
-  ,[2]  = {name = "CONN_CAPABILITIES"                    , type = "Capabilities" , definition = Capabilities            }
-  ,[3]  = {name = "SESS_AUTHENTICATE_CONTINUE"           , type = "AuthenticateContinue" , definition = AuthenticateContinue    }
-  ,[4]  = {name = "SESS_AUTHENTICATE_OK"                 , type = "AuthenticateOk" , definition = AuthenticateOk          }
-  ,[11] = {name = "NOTICE"                               , type = "Frame" , definition = Frame                   }
-  ,[12] = {name = "RESULTSET_COLUMN_META_DATA"           , type = "ColumnMetaData" , definition = ColumnMetaData          }
-  ,[13] = {name = "RESULTSET_ROW"                        , type = "Row" , definition = Row                     }
-  ,[14] = {name = "RESULTSET_FETCH_DONE"                 , type = "FetchDone" , definition = FetchDone               }
-  ,[15] = {name = "RESULTSET_FETCH_SUSPENDED"            , type = "nil" , definition = nil                     } -- TODO
-  ,[16] = {name = "RESULTSET_FETCH_DONE_MORE_RESULTSETS" , type = "FetchDoneMoreResultsets " , definition = FetchDoneMoreResultsets }
-  ,[17] = {name = "SQL_STMT_EXECUTE_OK"                  , type = "StmtExecuteOk" , definition =  StmtExecuteOk          }
-  ,[18] = {name = "RESULTSET_FETCH_DONE_MORE_OUT_PARAMS" , type = "FetchDoneMoreOutParams" , definition = FetchDoneMoreOutParams  }
+    [0]  = {name = "OK",                                   type = "Ok",                       }
+  , [1]  = {name = "ERROR",                                type = "Error",                    }
+  , [2]  = {name = "CONN_CAPABILITIES",                    type = "Capabilities",             }
+  , [3]  = {name = "SESS_AUTHENTICATE_CONTINUE",           type = "AuthenticateContinue",     }
+  , [4]  = {name = "SESS_AUTHENTICATE_OK",                 type = "AuthenticateOk",           }
+  , [11] = {name = "NOTICE",                               type = "Frame",                    }
+  , [12] = {name = "RESULTSET_COLUMN_META_DATA",           type = "ColumnMetaData",           }
+  , [13] = {name = "RESULTSET_ROW",                        type = "Row",                      }
+  , [14] = {name = "RESULTSET_FETCH_DONE",                 type = "FetchDone",                }
+  , [15] = {name = "RESULTSET_FETCH_SUSPENDED",            type = "nil",                      } -- TODO
+  , [16] = {name = "RESULTSET_FETCH_DONE_MORE_RESULTSETS", type = "FetchDoneMoreResultsets ", }
+  , [17] = {name = "SQL_STMT_EXECUTE_OK",                  type = "StmtExecuteOk",            }
+  , [18] = {name = "RESULTSET_FETCH_DONE_MORE_OUT_PARAMS", type = "FetchDoneMoreOutParams",   }
 } 
 Ok = {
   [1] = {attr = "optional" , type = "string", name ="msg" , tag  = 1}
@@ -645,7 +645,7 @@ register_proto_field(SessReset)
 register_proto_field(SessClose)
 register_proto_field(StmtExecute)
 register_proto_field(StmtExecuteOk)
--- register_proto_field(clientmessagetype)
+register_proto_field(clientmessagetype)
 register_proto_field(servermessagetype)
 register_proto_field(Ok)
 register_proto_field(Error)
@@ -724,16 +724,20 @@ function is_64bit(v)             return v == 1 end
 function is_length_delimited(v)  return v == 2 end 
 function is_32bit(v)             return v == 3 end 
 
-function get_message(server_or_client, msg_type_num)
+function get_server_or_client_message(server_or_client, msg_type_num)
   return server_or_client and servermessagetype[msg_type_num] or clientmessagetype[msg_type_num]
 end
 
-function get_message_definition(server_or_client, msg_type_num)
-  return get_message(server_or_client, msg_type_num).definition
+function get_message(server_or_client, msg_type_num)
+  return message_table[get_message_type(server_or_client, msg_type_num)]
 end
 
 function get_message_name(server_or_client, msg_type_num)
-  return get_message(server_or_client, msg_type_num).name
+  return get_server_or_client_message(server_or_client, msg_type_num).name
+end
+
+function get_message_type(server_or_client, msg_type_num)
+  return get_server_or_client_message(server_or_client, msg_type_num).type
 end
 
 function get_size_type_payload (offset, tvb)
@@ -829,10 +833,10 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
           local item_offset = po
           local wire_type = nil
           local tag_no    = nil
-          wire_type , tag_no, po = get_wire_tag(po, msg_payload)
-          
+          wire_type , tag_no, readsize = get_wire_tag(po, msg_payload)
+          po = po + readsize
 
-          local next_msg = get_message_definition(direction, msg_type_num)
+          local next_msg = get_message(direction, msg_type_num)
           if is_varint(wire_type) then
             local readsize = make_proto_field_varint(payload, po, msg_payload, wire_type, tag_no, next_msg)
             po = po + readsize 
@@ -880,8 +884,7 @@ function get_wire_tag(offset, tvb)
   local key  = tvb(offset, 1) :uint()  -- TODO check length
   local wire = bit32.band(key, 7)      -- TODO check value
   local tag  = bit32.rshift(key,3)     -- TODO check value
-  local offset = offset + 1
-  return wire, tag, offset
+  return wire, tag, 1 
 end
 
 -- 0  1  2  3  4  5  6  7 
@@ -932,17 +935,17 @@ function update_state(msg_size, payload_len, msg_type, msg_type_num, msg_payload
 end
 
 function make_proto_field_varint(subtree, pos, tvb, wire_type, tag_no, msg)
-   local val, acc, po, readsize = get_length_val(pos, tvb)
-   pos = pos + readsize
-   item = subtree:add(msg[tag_no].protofield, tvb(pos - readsize , readsize))
-   -- TODO check type of a value, i.e. enum.
-   if msg[tag_no].converter then
-     val = msg[tag_no].converter(acc) 
-   elseif msg[tag_no].type == "bool" then
-     val = decode_bool(val)
-   end
-   item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, wire_type, tag_no, tostring(val), acc))
-   return readsize 
+  local val, acc, po, readsize = get_length_val(pos, tvb)
+  pos = pos + readsize
+  item = subtree:add(msg[tag_no].protofield, tvb(pos - readsize , readsize))
+  -- TODO check type of a value, i.e. enum.
+  if msg[tag_no].converter then
+    val = msg[tag_no].converter(acc) 
+  elseif msg[tag_no].type == "bool" then
+    val = decode_bool(val)
+  end
+  item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, wire_type, tag_no, tostring(val), acc))
+  return readsize 
 end
 
 function make_proto_length_delimited(subtree, pos, tvb, wire_type, tag_no, msg)
