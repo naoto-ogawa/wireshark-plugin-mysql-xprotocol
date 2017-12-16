@@ -20,7 +20,7 @@ local f = xproto.fields
 f.message   = ProtoField.bytes  ("XProtocol.message"   , "Message"    )
 f.size      = ProtoField.bytes  ("XProtocol.size"      , "Size"       )
 f.tipe      = ProtoField.bytes  ("XProtocol.type"      , "Type"       )
-f.payload   = ProtoField.bytes  ("XProtocol.payload"   , "Payload"    )
+-- f.payload   = ProtoField.bytes  ("XProtocol.payload"   , "Payload"    )
 f.pbitem    = ProtoField.bytes  ("XProtocol.pbitem"    , "proto item" ) -- default , fail safe
 
 -- protocol buffer data type
@@ -502,159 +502,6 @@ Error = {
 }
 Error[1].converter = Error.enum_fun
 
-function is_num_or_str(v)
-  return type(v) == "number" or type(v) == "string"
-end
-
-function register_metatable(def_tbl, name)
-   local meta = getmetatable(def_tbl)
-   meta = meta and meta or {}
-   meta["name"] =  name
-   meta["__concat"] = function(v1, v2) if is_num_or_str(v1) then return v1 .. name else return name .. v2 end end
-   setmetatable(def_tbl, meta)
-end
-
-
-register_metatable(Capability,              "Capability")
-register_metatable(Capabilities,            "Capabilities")
-register_metatable(CapabilitiesGet,         "CapabilitiesGet")
-register_metatable(CapabilitiesSet,         "CapabilitiesSet")
-register_metatable(ConClose,                "Conclose")
-register_metatable(String,                  "String")
-register_metatable(Octets,                  "Octets")
-register_metatable(Scalar,                  "Scalar")
-register_metatable(ObjectFieldAny,          "ObjectFieldAny")
-register_metatable(ObjectAny,               "ObjectAny")
-register_metatable(ArrayAny,                "ArrayAny")
-register_metatable(Any,                     "Any")
-register_metatable(Column,                  "Column")
-register_metatable(Projection,              "Projection")
-register_metatable(Collection,              "Collection")
-register_metatable(Limit,                   "Limit")
-register_metatable(Order,                   "Order")
-register_metatable(UpdateOperation,         "UpdateOperation")
-register_metatable(Find,                    "Find")
-register_metatable(TypedRow,                "TypedRow")
-register_metatable(Insert,                  "Insert")
-register_metatable(Update,                  "Update")
-register_metatable(Delete,                  "Delete")
-register_metatable(CreateView,              "CreateView")
-register_metatable(ModifyView,              "ModifyView")
-register_metatable(DropView,                "DropView")
-register_metatable(Condition,               "Condition")
-register_metatable(ExpectOpen,              "ExpectOpen")
-register_metatable(ExpectClose,             "ExpectClose")
-register_metatable(Expr,                    "Expr")
-register_metatable(Identifier,              "Identifier")
-register_metatable(DocumentPathItem,        "DocumentPathItem")
-register_metatable(ColumnIdentifier,        "ColumnIdentifier")
-register_metatable(FunctionCall,            "FunctionCall")
-register_metatable(Operator,                "Operator")
-register_metatable(ObjectField,             "ObjectField")
-register_metatable(Object,                  "Object")
-register_metatable(Array,                   "Array")
-register_metatable(Frame,                   "Frame")
-register_metatable(Warning,                 "Warning")
-register_metatable(SessionVariableChanged,  "SessionVariableChanged")
-register_metatable(SessionStateChanged,     "SessionStateChanged")
-register_metatable(FetchDoneMoreOutParams,  "FetchDoneMoreOutParams")
-register_metatable(FetchDoneMoreResultsets, "FetchDoneMoreResultsets")
-register_metatable(FetchDone,               "FetchDone")
-register_metatable(ColumnMetaData,          "ColumnMetaData")
-register_metatable(Row,                     "Row")
-register_metatable(AuthenticateStart,       "AuthenticateStart")
-register_metatable(AuthenticateContinue,    "AuthenticateContinue")
-register_metatable(AuthenticateOk,          "AuthenticateOk")
-register_metatable(SessReset,               "SessReset")
-register_metatable(SessClose,               "SessClose")
-register_metatable(StmtExecute,             "StmtExecute")
-register_metatable(StmtExecuteOk,           "StmtExecuteOk")
-register_metatable(clientmessagetype,       "clientmessagetype")
-register_metatable(servermessagetype,       "servermessagetype")
-register_metatable(Ok,                      "Ok")
-register_metatable(Error,                   "Error")
-
-function get_table_name(tbl)
-  return getmetatable(tbl).name
-end
-
-function is_base_message(tbl)
-  -- return getmetatable(tbl).name == "clientmessagetype" or getmetatable(tbl).name == "servermessagetype" 
-  return getmetatable(tbl).name == "servermessagetype" 
-end
-
--- register field for each message
-function register_proto_field(def_tbl) 
-  local tbl_name = getmetatable(def_tbl).name
-  for key, msg in pairs(def_tbl) do 
-     if (type(key) == "number") then
-       local nm = def_tbl[key].name
-       pField = ProtoField.new (is_base_message(def_tbl) and nm or msg.type .. "." .. nm, nm, ftypes.BYTES)
-       f[tbl_name .. "." .. nm]   = pField
-       msg["protofield"] = pField
-     end
-  end 
-end
-
-register_proto_field(Capability)
-register_proto_field(Capabilities)
-register_proto_field(CapabilitiesGet)
-register_proto_field(CapabilitiesSet)
-register_proto_field(ConClose)
-register_proto_field(String)
-register_proto_field(Octets)
-register_proto_field(Scalar)
-register_proto_field(ObjectFieldAny)
-register_proto_field(ObjectAny)
-register_proto_field(ArrayAny)
-register_proto_field(Any)
-register_proto_field(Column)
-register_proto_field(Projection)
-register_proto_field(Collection)
-register_proto_field(Limit)
-register_proto_field(Order)
-register_proto_field(UpdateOperation)
-register_proto_field(Find)
-register_proto_field(TypedRow)
-register_proto_field(Insert)
-register_proto_field(Update)
-register_proto_field(Delete)
-register_proto_field(CreateView)
-register_proto_field(ModifyView)
-register_proto_field(DropView)
-register_proto_field(Condition)
-register_proto_field(ExpectOpen)
-register_proto_field(ExpectClose)
-register_proto_field(Expr)
-register_proto_field(Identifier)
-register_proto_field(DocumentPathItem)
-register_proto_field(ColumnIdentifier)
-register_proto_field(FunctionCall)
-register_proto_field(Operator)
-register_proto_field(Object)
-register_proto_field(ObjectField)
-register_proto_field(Array)
-register_proto_field(Frame)
-register_proto_field(Warning)
-register_proto_field(SessionVariableChanged)
-register_proto_field(SessionStateChanged)
-register_proto_field(FetchDoneMoreOutParams)
-register_proto_field(FetchDoneMoreResultsets)
-register_proto_field(FetchDone)
-register_proto_field(ColumnMetaData)
-register_proto_field(Row)
-register_proto_field(AuthenticateStart)
-register_proto_field(AuthenticateContinue)
-register_proto_field(AuthenticateOk)
-register_proto_field(SessReset)
-register_proto_field(SessClose)
-register_proto_field(StmtExecute)
-register_proto_field(StmtExecuteOk)
-register_proto_field(clientmessagetype)
-register_proto_field(servermessagetype)
-register_proto_field(Ok)
-register_proto_field(Error)
-
 -- message_table
 message_table = {
    Capability              = Capability
@@ -715,6 +562,47 @@ message_table = {
  , Ok                      = Ok
  , Error                   = Error
 }
+
+function is_num_or_str(v)
+  return type(v) == "number" or type(v) == "string"
+end
+
+function register_metatable(def_tbl, name)
+   local meta = getmetatable(def_tbl)
+   meta = meta and meta or {}
+   meta["name"] =  name
+   meta["__concat"] = function(v1, v2) if is_num_or_str(v1) then return v1 .. name else return name .. v2 end end
+   setmetatable(def_tbl, meta)
+end
+
+for key, value in pairs(message_table) do
+  register_metatable(value, key)
+end
+
+function get_table_name(tbl)
+  return getmetatable(tbl).name
+end
+
+function is_base_message(tbl)
+  return get_table_name(tbl) == "clientmessagetype" or getmetatable(tbl).name == "servermessagetype" 
+end
+
+-- register field for each message
+function register_proto_field(def_tbl) 
+  local tbl_name = getmetatable(def_tbl).name
+  for key, msg in pairs(def_tbl) do 
+     if (type(key) == "number") then
+       local nm = def_tbl[key].name
+       pField = ProtoField.new (is_base_message(def_tbl) and nm or msg.type .. "." .. nm, nm, ftypes.BYTES)
+       f[tbl_name .. "." .. nm]   = pField
+       msg["protofield"] = pField
+     end
+  end 
+end
+
+for key, value in pairs(message_table) do
+  register_proto_field(value)
+end
 
 -- https://developers.google.com/protocol-buffers/docs/encoding
 -- | Type | Meaning          | Used For
