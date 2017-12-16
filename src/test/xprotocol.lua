@@ -578,13 +578,18 @@ function get_table_name(tbl)
   return getmetatable(tbl).name
 end
 
+function is_base_message(tbl)
+  -- return getmetatable(tbl).name == "clientmessagetype" or getmetatable(tbl).name == "servermessagetype" 
+  return getmetatable(tbl).name == "servermessagetype" 
+end
+
 -- register field for each message
 function register_proto_field(def_tbl) 
   local tbl_name = getmetatable(def_tbl).name
   for key, msg in pairs(def_tbl) do 
      if (type(key) == "number") then
        local nm = def_tbl[key].name
-       pField = ProtoField.new (msg.type .. "." .. nm, nm, ftypes.BYTES)
+       pField = ProtoField.new (is_base_message(def_tbl) and nm or msg.type .. "." .. nm, nm, ftypes.BYTES)
        f[tbl_name .. "." .. nm]   = pField
        msg["protofield"] = pField
      end
@@ -724,7 +729,7 @@ function is_64bit(v)             return v == 1 end
 function is_length_delimited(v)  return v == 2 end 
 function is_32bit(v)             return v == 3 end 
 
-function get_server_or_client_message(server_or_client, msg_type_num)
+function get_base_message_table(server_or_client, msg_type_num)
   return server_or_client and servermessagetype[msg_type_num] or clientmessagetype[msg_type_num]
 end
 
@@ -733,11 +738,15 @@ function get_message(server_or_client, msg_type_num)
 end
 
 function get_message_name(server_or_client, msg_type_num)
-  return get_server_or_client_message(server_or_client, msg_type_num).name
+  return get_base_message_table(server_or_client, msg_type_num).name
 end
 
 function get_message_type(server_or_client, msg_type_num)
-  return get_server_or_client_message(server_or_client, msg_type_num).type
+  return get_base_message_table(server_or_client, msg_type_num).type
+end
+
+function get_message_protofield(server_or_client, msg_type_num)
+  return get_base_message_table(server_or_client, msg_type_num).protofield
 end
 
 function get_size_type_payload (offset, tvb)
@@ -811,6 +820,7 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
 
   while offset < tvb:len() do
     local messages = subtree:add (f.message, tvb(offset,5)) -- first 5 bytes (usually size and type) 
+
     offset, msg_size, payload_len, msg_type, msg_type_num, msg_payload = get_size_type_payload (offset, tvb)
     if msg_size then
       messages
@@ -825,7 +835,7 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
         :append_text (get_message_name(direction, msg_type_num))
     end
     if msg_payload then 
-      local payload = messages:add (f.payload, msg_payload) 
+      local payload = messages:add (get_message_protofield(direction, msg_type_num), msg_payload) 
       payload:append_text (string.format(" length (%d)", msg_payload:len()))
       if msg_payload :len() > 0 then
         local po = 0
