@@ -262,7 +262,7 @@ Condition = {
   ,[3] = {attr = "optional" , type = "ConditionOperation" , name="op" , tag = 3}
   ,enum_fun = function(v) return Condition.ConditionOperation[v] end
 }
-Condition[3].converter = enum_fun 
+Condition[3].converter = Condition.enum_fun 
 ExpectOpen = {
   CtxOperation = {
     [0] = "EXPECT_CTX_COPY_PREV"
@@ -272,7 +272,7 @@ ExpectOpen = {
  ,[2] = {attr = "repeated" , type = "Condition"    , name="cond" , tag = 2}
  ,enum_fun = function(v) return Open.CtxOperation[v] end
 }
-ExpectOpen[1].converter = enum_fun
+ExpectOpen[1].converter = ExpectOpen.enum_fun
 ExpectClose = {
 }
 -- mysqlx_expr.proto
@@ -298,7 +298,7 @@ Expr = {
  ,[9] = {attr = "optional" , type = "Array"            , name="array"         , tag = 9}
  ,enum_fun = function(v) return Expr.Type[v] end
 }
-Expr[1].converter = enum_fun
+Expr[1].converter = Expr.enum_fun
 Identifier = {
   [1] = {attr = "required" , type = "string" , name="name"        , tag = 1}
  ,[2] = {attr = "optional" , type = "string" , name="schema_name" , tag = 2}
@@ -316,7 +316,7 @@ DocumentPathItem = {
  ,[3] = {attr = "optional" , type = "uint32" , name="index" , tag = 3}
  ,enum_fun = function(v) return DocumentPathItem.Type[v] end
 }
-DocumentPathItem[1].converter = enum_fun 
+DocumentPathItem[1].converter = DocumentPathItem.enum_fun 
 ColumnIdentifier = {
   [1] = {attr = "repeated" , type = "DocumentPathItem" , name="document_path" , tag = 1}
  ,[2] = {attr = "optional" , type = "string"           , name="name"          , tag = 2}
@@ -352,7 +352,7 @@ Frame = {
  ,[3] = {attr = "optional" , type = "bytes"  , name="payload" , tag = 3}
  ,enum_fun = function(v) info("aaaaaaa");return Frame.Scope[v] end
 }
-Frame[2].converter = enum_fun
+Frame[2].converter = Frame.enum_fun
 Warning = {
   Level = {
     [1] = "NOTE"
@@ -364,7 +364,7 @@ Warning = {
  ,[3] = {attr = "required" , type = "string" , name="msg"   , tag = 3}
  ,enum_fun = function(v) return Warning.Level[v] end
 }
-Warning[1].converter = enum_fun
+Warning[1].converter = Warning.enum_fun
 SessionVariableChanged = {
   [1] = {attr = "required" , type = "string" , name="param" , tag = 1}
  ,[2] = {attr = "optional" , type = "Scalar" , name="value" , tag = 2}
@@ -421,7 +421,7 @@ ColumnMetaData = {
  ,[12] = {attr = "optional" , type = "uint32"    , name="content_type"      , tag = 12}
  ,enum_fun = function(v) return ColumnMetaData.FieldType[v] end
 }
-ColumnMetaData[1].converter = enum_fun 
+ColumnMetaData[1].converter = ColumnMetaData.enum_fun 
 Row = {
   [1] = {attr = "repeated" , type = "bytes" , name="field" , tag = 1}
 }
@@ -443,7 +443,7 @@ SessClose = {
 }
 -- mysqlx_sql.proto
 StmtExecute = {
-  [1] = {attr = "required" , type = "bytes"   , name="stmt"            , tag = 1}
+  [1] = {attr = "required" , type = "bytes"  , name="stmt"             , tag = 1}
  ,[2] = {attr = "repeated" , type = "Any"    , name="args"             , tag = 2}
  ,[3] = {attr = "optional" , type = "string" , name="namespace"        , tag = 3}
  ,[4] = {attr = "optional" , type = "bool"   , name="compact_metadata" , tag = 4}
@@ -472,19 +472,19 @@ clientmessagetype = {
 }
 --
 servermessagetype = {
-   [0]  = {name = "OK"                                   , definition = Ok                      }
-  ,[1]  = {name = "ERROR"                                , definition = Error                   }
-  ,[2]  = {name = "CONN_CAPABILITIES"                    , definition = Capabilities            }
-  ,[3]  = {name = "SESS_AUTHENTICATE_CONTINUE"           , definition = AuthenticateContinue    }
-  ,[4]  = {name = "SESS_AUTHENTICATE_OK"                 , definition = AuthenticateOk          }
-  ,[11] = {name = "NOTICE"                               , definition = Frame                   }
-  ,[12] = {name = "RESULTSET_COLUMN_META_DATA"           , definition = ColumnMetaData          }
-  ,[13] = {name = "RESULTSET_ROW"                        , definition = Row                     }
-  ,[14] = {name = "RESULTSET_FETCH_DONE"                 , definition = FetchDone               }
-  ,[15] = {name = "RESULTSET_FETCH_SUSPENDED"            , definition = nil                     } -- TODO
-  ,[16] = {name = "RESULTSET_FETCH_DONE_MORE_RESULTSETS" , definition = FetchDoneMoreResultsets }
-  ,[17] = {name = "SQL_STMT_EXECUTE_OK"                  , definition =  StmtExecuteOk          }
-  ,[18] = {name = "RESULTSET_FETCH_DONE_MORE_OUT_PARAMS" , definition = FetchDoneMoreOutParams  }
+   [0]  = {name = "OK"                                   , type = "Ok" , definition = Ok                      }
+  ,[1]  = {name = "ERROR"                                , type = "Error" , definition = Error                   }
+  ,[2]  = {name = "CONN_CAPABILITIES"                    , type = "Capabilities" , definition = Capabilities            }
+  ,[3]  = {name = "SESS_AUTHENTICATE_CONTINUE"           , type = "AuthenticateContinue" , definition = AuthenticateContinue    }
+  ,[4]  = {name = "SESS_AUTHENTICATE_OK"                 , type = "AuthenticateOk" , definition = AuthenticateOk          }
+  ,[11] = {name = "NOTICE"                               , type = "Frame" , definition = Frame                   }
+  ,[12] = {name = "RESULTSET_COLUMN_META_DATA"           , type = "ColumnMetaData" , definition = ColumnMetaData          }
+  ,[13] = {name = "RESULTSET_ROW"                        , type = "Row" , definition = Row                     }
+  ,[14] = {name = "RESULTSET_FETCH_DONE"                 , type = "FetchDone" , definition = FetchDone               }
+  ,[15] = {name = "RESULTSET_FETCH_SUSPENDED"            , type = "nil" , definition = nil                     } -- TODO
+  ,[16] = {name = "RESULTSET_FETCH_DONE_MORE_RESULTSETS" , type = "FetchDoneMoreResultsets " , definition = FetchDoneMoreResultsets }
+  ,[17] = {name = "SQL_STMT_EXECUTE_OK"                  , type = "StmtExecuteOk" , definition =  StmtExecuteOk          }
+  ,[18] = {name = "RESULTSET_FETCH_DONE_MORE_OUT_PARAMS" , type = "FetchDoneMoreOutParams" , definition = FetchDoneMoreOutParams  }
 } 
 Ok = {
   [1] = {attr = "optional" , type = "string", name ="msg" , tag  = 1}
@@ -500,7 +500,7 @@ Error = {
   ,[4] = {attr = "required" , type = "string"   , name="sql_state" , tag = 4}
   ,enum_fun = function(v) return Error.Severity[v] end
 }
-Error[1].converter = enum_fun
+Error[1].converter = Error.enum_fun
 
 function is_num_or_str(v)
   return type(v) == "number" or type(v) == "string"
@@ -646,7 +646,7 @@ register_proto_field(SessClose)
 register_proto_field(StmtExecute)
 register_proto_field(StmtExecuteOk)
 -- register_proto_field(clientmessagetype)
--- register_proto_field(servermessagetype)
+register_proto_field(servermessagetype)
 register_proto_field(Ok)
 register_proto_field(Error)
 
@@ -846,16 +846,14 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
           local wire_type = nil
           local tag_no    = nil
           wire_type , tag_no, po = get_wire_tag(po, msg_payload)
+          
+          info(string.format("@@ wire_type=%d, tag_no=%d", wire_type, tag_no))
+
           local proto_field = get_proto_field(direction, msg_type_num, tag_no)
           if is_varint(wire_type) then
-            local msgtbl = server_or_client and servermessagetype or clientmessagetype 
-            local readsize = make_proto_field_varint(payload, po, msg_payload, wire_type, tag_no, msgtbl)
-            l_pos = l_pos + readsize 
---            val, acc, po, readsize = get_length_val(po, msg_payload)
---           
---            item = payload:add(proto_field, msg_payload(item_offset, 1 + readsize))
---            item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%d) acc (%d)"
---                         , po, wire_type, tag_no, val, acc))
+            local next_msg = get_message_definition(direction, msg_type_num)
+            local readsize = make_proto_field_varint(payload, po, msg_payload, wire_type, tag_no, next_msg)
+            po = po + readsize 
 
           elseif is_length_delimited(wire_type) then
             le, acc, po, readsize = get_length_val(po, msg_payload)
@@ -961,6 +959,8 @@ function update_state(msg_size, payload_len, msg_type, msg_type_num, msg_payload
 end
 
 function make_proto_field_varint(subtree, pos, tvb, wire_type, tag_no, msg)
+   info(string.format("wire=%d, tag_no=%d, msg=%s", wire_type, tag_no, getmetatable(msg).name))
+   info(msg[tag_no].converter and "converter" or "no conv")
        local val, acc, po, readsize = get_length_val(pos, tvb)
        pos = pos + readsize
        item = subtree:add(msg[tag_no].protofield, tvb(pos - readsize , readsize))
@@ -989,26 +989,8 @@ function process_tree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtr
      info(string.format("pos=%d, len=%d " , l_pos, len))
      if is_varint(l_wire_type) then
 
---            val, acc, po, readsize = get_length_val(po, msg_payload)
---           
---            item = payload:add(proto_field, msg_payload(item_offset, 1 + readsize))
---            item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%d) acc (%d)"
---                         , po, wire_type, tag_no, val, acc))
           local readsize = make_proto_field_varint(l_subtree, l_pos, l_tvb, l_wire_type, l_tag_no, l_msg)
           l_pos = l_pos + readsize 
---        local val, acc, po, readsize = get_length_val(l_pos, l_tvb)
---        l_pos = l_pos + readsize
---        item = l_subtree:add(l_msg[l_tag_no].protofield, l_tvb(l_pos - readsize , readsize))
--- 
---        -- TODO check type of a value, i.e. enum.
---        if l_msg[l_tag_no].converter then
---          val = l_msg[l_tag_no].converter(acc) 
---        elseif l_msg[l_tag_no].type == "bool" then
---          val = decode_bool(val)
---        end
--- 
---        item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, l_wire_type, l_tag_no, tostring(val), acc))
- 
 
      elseif is_length_delimited(l_wire_type) then
        info("eee")
