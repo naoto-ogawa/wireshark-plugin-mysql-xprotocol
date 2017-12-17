@@ -1,5 +1,3 @@
-require "alien"
-
 -- naminig rule
 -- identifier  -->  word1 .. "_" .. word2
 
@@ -20,11 +18,10 @@ local f = xproto.fields
 f.message   = ProtoField.bytes  ("XProtocol.message"   , "Message"    )
 f.size      = ProtoField.bytes  ("XProtocol.size"      , "Size"       )
 f.tipe      = ProtoField.bytes  ("XProtocol.type"      , "Type"       )
--- f.payload   = ProtoField.bytes  ("XProtocol.payload"   , "Payload"    )
 f.pbitem    = ProtoField.bytes  ("XProtocol.pbitem"    , "proto item" ) -- default , fail safe
 
 -- protocol buffer data type
-terminal_type = {
+local terminal_type = {
    "double"
   ,"float"
   ,"int32"
@@ -43,7 +40,7 @@ terminal_type = {
 }
 
 -- state between packets -- TODO not good state management, we need to consider each item is divided between packets.
-state = {
+local state = {
     payload_len  = nil
   , msg_type_num = nil
   , msg_payload  = nil
@@ -332,7 +329,7 @@ Operator = {
  , [2] = {attr = "repeated", type = "Expr",   name="param", tag = 2}
 }
 ObjectField = {
- , [1] = {attr = "required", type = "string", name="key",   tag = 1}
+   [1] = {attr = "required", type = "string", name="key",   tag = 1}
  , [2] = {attr = "required", type = "Expr",   name="value", tag = 2}
 }
 Object = {
