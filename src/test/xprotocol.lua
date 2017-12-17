@@ -42,7 +42,7 @@ terminal_type = {
   ,"bytes"
 }
 
--- state between packets -- TODO not good state management, we need to consider each item is divided between packet.
+-- state between packets -- TODO not good state management, we need to consider each item is divided between packets.
 state = {
     payload_len  = nil
   , msg_type_num = nil
@@ -205,12 +205,12 @@ Update = {
  , [7] = {attr = "repeated", type = "UpdateOperation", name="operation",  tag = 7}
 }
 Delete = {
-  [1] = {attr = "required" , type = "Collection" , name="collection" , tag = 1}
- ,[2] = {attr = "optional" , type = "DataModel" , name="data_model" , tag = 2, converter = DataModel.enum_fun}
- ,[3] = {attr = "optional" , type = "Expr" , name="criteria" , tag = 3}
- ,[6] = {attr = "repeated" , type = "Scalar" , name="args" , tag = 6}
- ,[4] = {attr = "optional" , type = "Limit" , name="limit" , tag = 4}
- ,[5] = {attr = "repeated" , type = "Order" , name="order" , tag = 5}
+   [1] = {attr = "required", type = "Collection", name="collection", tag = 1}
+ , [2] = {attr = "optional", type = "DataModel",  name="data_model", tag = 2, converter = DataModel.enum_fun}
+ , [3] = {attr = "optional", type = "Expr",       name="criteria",   tag = 3}
+ , [6] = {attr = "repeated", type = "Scalar",     name="args",       tag = 6}
+ , [4] = {attr = "optional", type = "Limit",      name="limit",      tag = 4}
+ , [5] = {attr = "repeated", type = "Order",      name="order",      tag = 5}
 }
 ViewAlgorithm = {
   [1] = "UNDEFINED"
@@ -257,9 +257,9 @@ Condition = {
     [0] = "EXPECT_OP_SET"
    ,[1] = "EXPECT_OP_UNSET"
   }
-  ,[1] = {attr = "required" , type = "uint32" , name="condition_key"  , tag = 1}
-  ,[2] = {attr = "optional" , type = "bytes" , name="condition_value" , tag = 2}
-  ,[3] = {attr = "optional" , type = "ConditionOperation" , name="op" , tag = 3}
+  , [1] = {attr = "required", type = "uint32",             name="condition_key",   tag = 1}
+  , [2] = {attr = "optional", type = "bytes",              name="condition_value", tag = 2}
+  , [3] = {attr = "optional", type = "ConditionOperation", name="op",              tag = 3}
   ,enum_fun = function(v) return Condition.ConditionOperation[v] end
 }
 Condition[3].converter = Condition.enum_fun 
@@ -328,12 +328,12 @@ FunctionCall = {
  ,[2] = {attr = "repeated" , type = "Expr"       , name="param" , tag = 2}
 }
 Operator = {
-  [1] = {attr = "required" , type = "string" , name="name" , tag = 1}
- ,[2] = {attr = "repeated" , type = "Expr"   , name="param" , tag = 2}
+   [1] = {attr = "required", type = "string", name="name",  tag = 1}
+ , [2] = {attr = "repeated", type = "Expr",   name="param", tag = 2}
 }
 ObjectField = {
-  [1] = {attr = "required" , type = "string" , name="key" , tag = 1}
- ,[2] = {attr = "required" , type = "Expr"   , name="value" , tag = 2}
+ , [1] = {attr = "required", type = "string", name="key",   tag = 1}
+ , [2] = {attr = "required", type = "Expr",   name="value", tag = 2}
 }
 Object = {
   [1] = {attr = "repeated" , type = "ObjectField" , name="fld" , tag = 1}
@@ -591,12 +591,12 @@ end
 function register_proto_field(def_tbl) 
   local tbl_name = getmetatable(def_tbl).name
   for key, msg in pairs(def_tbl) do 
-     if (type(key) == "number") then
-       local nm = def_tbl[key].name
-       pField = ProtoField.new (is_base_message(def_tbl) and nm or msg.type .. "." .. nm, nm, ftypes.BYTES)
-       f[tbl_name .. "." .. nm]   = pField
-       msg["protofield"] = pField
-     end
+    if (type(key) == "number") then
+      local nm = def_tbl[key].name
+      local proto_field = ProtoField.new (is_base_message(def_tbl) and nm or msg.type .. "." .. nm, nm, ftypes.BYTES)
+      f[tbl_name .. "." .. nm] = proto_field
+      msg["protofield"] = proto_field
+    end
   end 
 end
 
@@ -683,12 +683,12 @@ end
 
 -- https://stackoverflow.com/questions/33510736/check-if-array-contains-specific-value
 function has_value (tab, val)
-    for index, value in ipairs(tab) do
-        if value == val then
-            return true
-        end
+  for index, value in ipairs(tab) do
+    if value == val then
+      return true
     end
-    return false
+  end
+  return false
 end
 
 function is_terminal(val) 
@@ -737,9 +737,9 @@ end
 
 DissectorTable.get("tcp.port"):add(p.server_port, xproto)
 
--- lettle ending and 7bit each
+-- little ending and 7bit each
 function get_length_val(offset, tvb) 
-  offsetstart = offset
+  offset_start = offset
   local b = tvb(offset, 1)
   offset = offset + 1
   local acc, base = get_number(0, 1, b)
@@ -748,7 +748,7 @@ function get_length_val(offset, tvb)
     offset = offset + 1
     acc, base = get_number(acc, base, b)
   end
-  return b:uint(), acc, offset, (offset - offsetstart)
+  return b:uint(), acc, offset, (offset - offset_start)
 end
 
 -- @param val value to be analyzed.
@@ -775,7 +775,7 @@ function decode_zigzag(v)
   if v % 2 == 0 then
     return (v / 2) 
   else
-    return -((v+1) / 2)
+    return -((v + 1) / 2)
   end
 end
 
@@ -816,22 +816,22 @@ function update_state(msg_size, payload_len, msg_type, msg_type_num, msg_payload
 
 end
 
-function make_proto_field_varint(subtree, pos, tvb, wire_type, tag_no, msg)
-  local val, acc, po, readsize = get_length_val(pos, tvb)
-  pos = pos + readsize
-  item = subtree:add(msg[tag_no].protofield, tvb(pos - readsize , readsize))
-  -- TODO check type of a value, i.e. enum.
-  if msg[tag_no].converter then
+function make_proto_field_varint(parent_tree, pos, tvb, wire_type, tag_no, msg)
+  local val, acc, po, read_size = get_length_val(pos, tvb)
+  pos = pos + read_size
+  item = parent_tree:add(msg[tag_no].protofield, tvb(pos - read_size , read_size))
+  -- TODO check type of a value.
+  if msg[tag_no].converter          then  -- enum
     val = msg[tag_no].converter(acc) 
   elseif msg[tag_no].type == "bool" then
     val = decode_bool(val)
   end
   item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, wire_type, tag_no, tostring(val), acc))
-  return readsize 
+  return read_size 
 end
 
-function make_proto_length_delimited(subtree, pos, tvb, wire_type, tag_no, msg)
-  local pos_s = pos
+function make_proto_length_delimited(parent_tree, pos, tvb, wire_type, tag_no, msg)
+  local pos_start = pos
   local le, acc, po, readsize = get_length_val(pos, tvb)
   pos = pos + readsize
 
@@ -840,7 +840,7 @@ function make_proto_length_delimited(subtree, pos, tvb, wire_type, tag_no, msg)
     local next_tvb = tvb(pos, acc)
     va = tvb(pos, acc) : string()
     pos = pos + acc
-    subtree
+    parent_tree
       :add(msg[tag_no].protofield, next_tvb)
       :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
                     , po, wire_type, tag_no, le, acc, va))
@@ -849,38 +849,68 @@ function make_proto_length_delimited(subtree, pos, tvb, wire_type, tag_no, msg)
     local next_tvb = tvb(pos, acc)
     pos = pos + acc
     local next_msg = message_table[msg[tag_no].type]
-    local next_subtree = subtree:add(msg[tag_no].protofield, next_tvb)
+    local next_subtree = parent_tree:add(msg[tag_no].protofield, next_tvb)
     process_tree(next_tvb, next_msg, next_subtree, acc) 
   end
-  return pos - pos_s
+  return pos - pos_start
 end
 
 -- analyze data recursivly.
 function process_tree(tvb, msg, subtree)
-  local l_pos = 0
-  local l_tvb = tvb
-  local l_msg = msg
+  local l_pos     = 0
+  local l_tvb     = tvb
+  local l_msg     = msg
   local l_msg_len = tvb:len()
   local l_subtree = subtree
 
-  while (l_pos < l_msg_len) do -----
-     local l_wire_type, l_tag_no, l_po = get_wire_tag(l_pos, l_tvb) 
-     l_pos = l_pos + 1
+  while (l_pos < l_msg_len) do
+     local l_wire_type, l_tag_no, read_size = get_wire_tag(l_pos, l_tvb) 
+     l_pos = l_pos + read_size 
 
-     -- info(string.format("pos=%d, len=%d " , l_pos, len))
      if is_varint(l_wire_type) then
-
-        local readsize = make_proto_field_varint(l_subtree, l_pos, l_tvb, l_wire_type, l_tag_no, l_msg)
-        l_pos = l_pos + readsize 
+        local read_size = make_proto_field_varint(l_subtree, l_pos, l_tvb, l_wire_type, l_tag_no, l_msg)
+        l_pos = l_pos + read_size 
 
      elseif is_length_delimited(l_wire_type) then
-        local readsize =  make_proto_length_delimited(l_subtree, l_pos, l_tvb, l_wire_type, l_tag_no, l_msg)
-        l_pos = l_pos + readsize 
+        local read_size =  make_proto_length_delimited(l_subtree, l_pos, l_tvb, l_wire_type, l_tag_no, l_msg)
+        l_pos = l_pos + read_size 
 
      end
   end
 end
 
+-- packet test data
+-- SQL
+--  Select
+--  Insert
+--  Update
+--  Delete
+--  error
+--   SQL syntacs error
+--   select error (table not found)
+--   insert error (key duplication)
+--  warnning
+--   insert (out of range)
+-- CRUD
+--  Read
+--  Create
+--  Update
+--  Delete
+--  error
+--   select error (table not found)
+--   insert error (key duplication)
+-- Connection
+--  Open
+--  Close
+-- JSON
+--  find
+--  insert
+--  update
+-- Function
+--  sum
+-- Pipeline
+
+-- info(string.format("pos=%d, len=%d " , l_pos, len))
 -- info(string.format("@@ wire_type=%d, tag_no=%d", wire_type, tag_no))
 
 --
