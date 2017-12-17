@@ -726,25 +726,9 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
       local payload = messages:add (get_message_protofield(direction, msg_type_num), msg_payload) 
       payload:append_text (string.format(" length (%d)", msg_payload:len()))
       if msg_payload :len() > 0 then
-        local po = 0
-        while po < msg_payload :len() do
-          local item_offset = po
-          local wire_type = nil
-          local tag_no    = nil
-          wire_type , tag_no, readsize = get_wire_tag(po, msg_payload)
-          po = po + readsize
-
-          local next_msg = get_message(direction, msg_type_num)
-          if is_varint(wire_type) then
-            local readsize = make_proto_field_varint(payload, po, msg_payload, wire_type, tag_no, next_msg)
-            po = po + readsize 
-
-          elseif is_length_delimited(wire_type) then
-
-            local readsize =  make_proto_length_delimited(payload, po, msg_payload, wire_type, tag_no, next_msg)
-            po = po + readsize 
-          end
-        end
+        
+        local next_msg = get_message(direction, msg_type_num)
+        process_tree(msg_payload, next_msg, payload)
       end
     end
     update_state(msg_size, payload_len, msg_type, msg_type_num, msg_payload)
@@ -872,18 +856,18 @@ function make_proto_length_delimited(subtree, pos, tvb, wire_type, tag_no, msg)
 end
 
 -- analyze data recursivly.
-function process_tree(tvb, msg, subtree, len) -- tvb, msg, subtree, len -> subtree
+function process_tree(tvb, msg, subtree)
   local l_pos = 0
   local l_tvb = tvb
   local l_msg = msg
   local l_msg_len = tvb:len()
   local l_subtree = subtree
 
-  while (l_pos < l_msg_len) do
+  while (l_pos < l_msg_len) do -----
      local l_wire_type, l_tag_no, l_po = get_wire_tag(l_pos, l_tvb) 
      l_pos = l_pos + 1
 
-     info(string.format("pos=%d, len=%d " , l_pos, len))
+     -- info(string.format("pos=%d, len=%d " , l_pos, len))
      if is_varint(l_wire_type) then
 
         local readsize = make_proto_field_varint(l_subtree, l_pos, l_tvb, l_wire_type, l_tag_no, l_msg)
