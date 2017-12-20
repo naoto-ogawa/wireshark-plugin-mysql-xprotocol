@@ -1,16 +1,18 @@
 -- naminig rule
 -- identifier  -->  word1 .. "_" .. word2
 
+-- TODO decode notice
+-- TODO decode float
+
 local xproto = Proto ("XProtocol", "X Protocol Dissector");
 
 function xproto.init () 
-  init_state()
+  -- init_state()
 end
 
 -- Preferences
 local p = xproto.prefs
 p.server_port = Pref.uint ("server port", 8000, "server port number") -- TODO 33060 should be default
-
 
 -- Fields
 local f = xproto.fields
@@ -39,12 +41,12 @@ local terminal_type = {
   ,"bytes"
 }
 
--- state between packets -- TODO not good state management, we need to consider each item is divided between packets.
-local state = {
-    payload_len  = nil
-  , msg_type_num = nil
-  , msg_payload  = nil
-}
+-- -- state between packets -- TODO not good state management, we need to consider each item is divided between packets.
+-- local state = {
+--     payload_len  = nil
+--   , msg_type_num = nil
+--   , msg_payload  = nil
+-- }
 
 -- mysql_connection.proto
 Capability = {
@@ -347,7 +349,7 @@ Frame = {
  ,[1] = {attr = "required" , type = "uint32" , name="type"    , tag = 1}
  ,[2] = {attr = "optional" , type = "Scope"  , name="scope"   , tag = 2}
  ,[3] = {attr = "optional" , type = "bytes"  , name="payload" , tag = 3}
- ,enum_fun = function(v) info("aaaaaaa");return Frame.Scope[v] end
+ ,enum_fun = function(v) return Frame.Scope[v] end
 }
 Frame[2].converter = Frame.enum_fun
 Warning = {
@@ -456,7 +458,7 @@ clientmessagetype = {
   , [5]  = {name = "SESS_AUTHENTICATE_CONTINUE", type = "AuthenticateContinue", }
   , [6]  = {name = "SESS_RESET",                 type = "SessReset",            }
   , [7]  = {name = "SESS_CLOSE",                 type = "SessClose",            }
-  , [12] = {name = "SQL_STMT_EXECUTE",           type = "StmtExecute ",         }
+  , [12] = {name = "SQL_STMT_EXECUTE",           type = "StmtExecute",          }
   , [17] = {name = "CRUD_FIND",                  type = "Find",                 }
   , [18] = {name = "CRUD_INSERT",                type = "Insert",               }
   , [19] = {name = "CRUD_UPDATE",                type = "Update",               }
@@ -479,7 +481,7 @@ servermessagetype = {
   , [13] = {name = "RESULTSET_ROW",                        type = "Row",                      }
   , [14] = {name = "RESULTSET_FETCH_DONE",                 type = "FetchDone",                }
   , [15] = {name = "RESULTSET_FETCH_SUSPENDED",            type = "nil",                      } -- TODO
-  , [16] = {name = "RESULTSET_FETCH_DONE_MORE_RESULTSETS", type = "FetchDoneMoreResultsets ", }
+  , [16] = {name = "RESULTSET_FETCH_DONE_MORE_RESULTSETS", type = "FetchDoneMoreResultsets",  }
   , [17] = {name = "SQL_STMT_EXECUTE_OK",                  type = "StmtExecuteOk",            }
   , [18] = {name = "RESULTSET_FETCH_DONE_MORE_OUT_PARAMS", type = "FetchDoneMoreOutParams",   }
 } 
@@ -521,6 +523,7 @@ message_table = {
  , UpdateOperation         = UpdateOperation
  , Find                    = Find
  , Insert                  = Insert
+ , TypedRow                = TypedRow 
  , Update                  = Update
  , Delete                  = Delete
  , CreateView              = CreateView
@@ -638,7 +641,7 @@ function get_size_type_payload (offset, tvb)
   -- size
   local msg_size
   local payload_len
-  if state.payload_len == nil then
+  -- if state.payload_len == nil then
     if (offset + 4 <= tvb:len()) then
       msg_size = tvb(offset, 4)
       payload_len = msg_size :le_int() - 1
@@ -647,14 +650,14 @@ function get_size_type_payload (offset, tvb)
       msg_size    = nil
       payload_len = nil
     end
-  else 
-    msg_size    = nil
-    payload_len = state.payload_len 
-  end
+  -- else 
+    -- msg_size    = nil
+    -- payload_len = state.payload_len 
+  -- end
   -- type
   local msg_type
   local msg_type_num
-  if state.msg_type_num == nil then 
+  -- if state.msg_type_num == nil then 
     if (offset + 1 <= tvb:len()) then 
       msg_type     = tvb(offset, 1)
       msg_type_num = msg_type :int() 
@@ -663,13 +666,14 @@ function get_size_type_payload (offset, tvb)
       msg_type     = nil 
       msg_type_num = nil 
     end
-  else
-    msg_type     = nil 
-    msg_type_num = state.msg_type_num
-  end
+  --  else
+  --   msg_type     = nil 
+  --  msg_type_num = state.msg_type_num
+  -- end
   -- payload
   local msg_payload 
-  if (offset + payload_len <= tvb:len()) and state.payload == nil then 
+  -- if (offset + payload_len <= tvb:len()) and state.payload == nil then 
+  if (offset + payload_len <= tvb:len()) then 
     msg_payload = tvb(offset, payload_len) 
   else
     msg_payload = nil
@@ -692,7 +696,7 @@ function is_terminal(val)
   return has_value(terminal_type, val)
 end
 
-function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
+function xproto.dissector(tvb, pinfo, tree) -- tvb = testy vertual tvbfer
   pinfo.cols.protocol = "XPROTO"
 
   local subtree = tree:add (xproto, tvb())
@@ -707,6 +711,14 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
     local messages = subtree:add (f.message, tvb(offset,5)) -- first 5 bytes (usually size and type) 
 
     offset, msg_size, payload_len, msg_type, msg_type_num, msg_payload = get_size_type_payload (offset, tvb)
+
+    -- reassemble
+    -- https://stackoverflow.com/questions/13138088/how-do-i-reassemble-tcp-packet-in-lua-dissector
+    if msg_type == nill or msg_payload == nill then
+      pinfo.desegment_len = DESEGMENT_ONE_MORE_SEGMENT 
+      return
+    end
+
     if msg_size then
       messages
         :add (f.size, msg_size) 
@@ -728,7 +740,8 @@ function xproto.dissector (tvb, pinfo, tree) -- tvb = testy vertual tvbfer
         process_tree(msg_payload, next_msg, payload)
       end
     end
-    update_state(msg_size, payload_len, msg_type, msg_type_num, msg_payload)
+    -- 
+    -- update_state(msg_size, payload_len, msg_type, msg_type_num, msg_payload)
   end
 end
 
@@ -780,38 +793,38 @@ function decode_bool(v)
   return v == 0 and "FALSE" or "TRUE"
 end
 
--- state management
-function init_state()
-  state.payload_len  = nil
-  state.msg_type_num = nil
-  state.msg_payload  = nil
-end
-
-function update_state(msg_size, payload_len, msg_type, msg_type_num, msg_payload)
-
-  if msg_size ~= nil and msg_type ~= nil and msg_payload ~= nil then
-    init_state()
-    return
-  end 
-
-  if msg_size ~= nil and msg_type ~= nil and msg_payload == nil then
-    state.payload_len  = payload_len 
-    state.msg_type_num = msg_type_num
-    state.msg_payload  = nil
-    return
-  end 
-  
-  if msg_size ~= nil and msg_type == nil and msg_payload == nil then
-    state.payload_len  = payload_len 
-    state.msg_type_num = nil
-    state.msg_payload  = nil
-    return
-  end 
-
-  -- TODO error message
-  init_state()
-
-end
+---- state management
+--function init_state()
+--  state.payload_len  = nil
+--  state.msg_type_num = nil
+--  state.msg_payload  = nil
+--end
+--
+-- function update_state(msg_size, payload_len, msg_type, msg_type_num, msg_payload)
+-- 
+--   if msg_size ~= nil and msg_type ~= nil and msg_payload ~= nil then
+--     init_state()
+--     return
+--   end 
+-- 
+--   if msg_size ~= nil and msg_type ~= nil and msg_payload == nil then
+--     state.payload_len  = payload_len 
+--     state.msg_type_num = msg_type_num
+--     state.msg_payload  = nil
+--     return
+--   end 
+--   
+--   if msg_size ~= nil and msg_type == nil and msg_payload == nil then
+--     state.payload_len  = payload_len 
+--     state.msg_type_num = nil
+--     state.msg_payload  = nil
+--     return
+--   end 
+-- 
+--   -- TODO error message
+--   init_state()
+-- 
+-- end
 
 function make_proto_field_varint(parent_tree, pos, tvb, wire_type, tag_no, msg)
   local val, acc, po, read_size = get_length_val(pos, tvb)
@@ -834,13 +847,20 @@ function make_proto_length_delimited(parent_tree, pos, tvb, wire_type, tag_no, m
 
   local type = msg[tag_no].type 
   if is_terminal(type) then
-    local next_tvb = tvb(pos, acc)
-    va = tvb(pos, acc) : string()
-    pos = pos + acc
-    parent_tree
-      :add(msg[tag_no].protofield, next_tvb)
-      :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
-                    , po, wire_type, tag_no, le, acc, va))
+    if acc == 0 then
+      parent_tree
+        :add(msg[tag_no].protofield)
+        :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d)"
+                      , po, wire_type, tag_no, le, acc))
+    else
+      local next_tvb = tvb(pos, acc)
+      local va = tvb(pos, acc) : string()
+      pos = pos + acc
+      parent_tree
+        :add(msg[tag_no].protofield, next_tvb)
+        :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
+                      , po, wire_type, tag_no, le, acc, va))
+     end
   else 
     -- recursive
     local next_tvb = tvb(pos, acc)
@@ -876,26 +896,41 @@ function process_tree(tvb, msg, subtree)
   end
 end
 
--- packet test data
--- SQL
---  Select
---  Insert
---  Update
---  Delete
---  error
---   SQL syntacs error
---   select error (table not found)
---   insert error (key duplication)
+-- packet test data                  | capture file                    |
+-- login falirue                     | mysqlsh_password_invalid.pcapng |
+-- SQL                               | -                               | -
+--  Select                           | sql_select_01.pcapng            | select * from country limit 1;
+--                                   | sql_select_02.pcapng            | select * from  countrylanguage limit 1;   | enum, float
+--  Insert                           | sql_insert.pcapng               | insert into foo(id,v) values(123, 'abc');
+--  Update                           | sql_update.pcapng               | update foo set v='xyz' where id=123;
+--  Delete                           | sql_delete.pcapng               | delete from foo;
+--   SQL syntacs error               | sql_syntax_error.pcapng         | updat foo set v='xyz' where id=123;
+--   select error (table not found)  | sql_select_error.pcapng         | select * from country__ limit 1;
+--   insert error (key duplication)  | sql_insert_duplicate_key.pcapng | insert into bazz values(1);
 --  warnning
 --   insert (out of range)
+--  Ohters
+--   show schemas                    | sql_show_schemas.pcapng         |
+--   use world_x                     | sql_use_world_x.pcapng          |
 -- CRUD
---  Read
---  Create
---  Update
---  Delete
+--  Read                             | crud_find_01.pcapng             | db.countryinfo.find().limit(1)
+--                                   | crud_find_02.pcapng             | db.countryinfo.find('$.Name = "Aruba"')
+--                                   | crud_find_03.pcapng             | db.countryinfo.find('$.geography.Continent = "North America"').fields("count('$._id') as count")
+--                                   | crud_find_04.pcapng             | db.countryinfo.find().fields(["$.geography.Continent as continent", "count('$._id') as count"]).groupBy('$.geography.Continent')
+--                                   | crud_find_05.pcapng             | db.countryinfo.find('$.geography.Continent = :param1').fields("count('$._id') as count").bind('param1', 'North America') 
+--  Create                           | crud_insert_01.pcapng           | products.add ({" name":"bananas ", " color":"yellow "}).execute(); 
+
+--  Update                           | crud_update_01.pcapng           | products.modify (" product_id = 123").set("color", "red").execute(); s.modify (" product_id = 123").set("color", "red").execute(); 
+--  Delete                           | crud_delete_01.pcapng           | products.remove (" product_id = 123").execute(); 
 --  error
---   select error (table not found)
+--   select error                    | curd_error_find_01.pcapng       | db.countryinfo.find().fields(["$.geography.Continent as continent"]).groupBy('$.geography.Continent').having("count('$._id') < 10")
 --   insert error (key duplication)
+-- Schema 
+--  getSchema                       | crud_getschema.pcapng            | db = session.getSchema("world_x")
+--  getSchema  (create schema)      | mysqlsh_session_getschema.pcapng | mydb = session.getSchema("mydb")
+-- Collection
+--  create                          | mysqlsh_create_collection.pcapng | mydb.createCollection("products")
+--  get                             | mysqlsh_get_collection.pcapng    | mydb.getCollection("products")
 -- Connection
 --  Open
 --  Close
@@ -1001,3 +1036,5 @@ end
 -- 0f -> 15
 --
 -- 
+-- 
+
