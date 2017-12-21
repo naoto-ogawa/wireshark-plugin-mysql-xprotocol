@@ -896,51 +896,53 @@ function process_tree(tvb, msg, subtree)
   end
 end
 
--- packet test data                  | capture file                    |
--- login falirue                     | mysqlsh_password_invalid.pcapng |
--- SQL                               | -                               | -
---  Select                           | sql_select_01.pcapng            | select * from country limit 1;
---                                   | sql_select_02.pcapng            | select * from  countrylanguage limit 1;   | enum, float
---  Insert                           | sql_insert.pcapng               | insert into foo(id,v) values(123, 'abc');
---  Update                           | sql_update.pcapng               | update foo set v='xyz' where id=123;
---  Delete                           | sql_delete.pcapng               | delete from foo;
---   SQL syntacs error               | sql_syntax_error.pcapng         | updat foo set v='xyz' where id=123;
---   select error (table not found)  | sql_select_error.pcapng         | select * from country__ limit 1;
---   insert error (key duplication)  | sql_insert_duplicate_key.pcapng | insert into bazz values(1);
+-- packet test data              | capture file                     | statement
+-- -------------------------------------------------------------------------------------------------------------
+-- login falirue                 | mysqlsh_password_invalid.pcapng  |
+-- SQL                           | -                                | -
+--  Select                       | sql_select_01.pcapng             | select * from country limit 1;
+--                               | sql_select_02.pcapng             | select * from  countrylanguage limit 1;
+--  Insert                       | sql_insert.pcapng                | insert into foo(id,v) values(123, 'abc');
+--  Update                       | sql_update.pcapng                | update foo set v='xyz' where id=123;
+--  Delete                       | sql_delete.pcapng                | delete from foo;
+--   SQL syntacs error           | sql_syntax_error.pcapng          | updat foo set v='xyz' where id=123;
+--   select error (table)        | sql_select_error.pcapng          | select * from country__ limit 1;
+--   insert error (duplication)  | sql_insert_duplicate_key.pcapng  | insert into bazz values(1);
 --  warnning
---   insert (out of range)
---  Ohters
---   show schemas                    | sql_show_schemas.pcapng         |
---   use world_x                     | sql_use_world_x.pcapng          |
--- CRUD
---  Read                             | crud_find_01.pcapng             | db.countryinfo.find().limit(1)
---                                   | crud_find_02.pcapng             | db.countryinfo.find('$.Name = "Aruba"')
---                                   | crud_find_03.pcapng             | db.countryinfo.find('$.geography.Continent = "North America"').fields("count('$._id') as count")
---                                   | crud_find_04.pcapng             | db.countryinfo.find().fields(["$.geography.Continent as continent", "count('$._id') as count"]).groupBy('$.geography.Continent')
---                                   | crud_find_05.pcapng             | db.countryinfo.find('$.geography.Continent = :param1').fields("count('$._id') as count").bind('param1', 'North America') 
---  Create                           | crud_insert_01.pcapng           | products.add ({" name":"bananas ", " color":"yellow "}).execute(); 
-
---  Update                           | crud_update_01.pcapng           | products.modify (" product_id = 123").set("color", "red").execute(); s.modify (" product_id = 123").set("color", "red").execute(); 
---  Delete                           | crud_delete_01.pcapng           | products.remove (" product_id = 123").execute(); 
---  error
---   select error                    | curd_error_find_01.pcapng       | db.countryinfo.find().fields(["$.geography.Continent as continent"]).groupBy('$.geography.Continent').having("count('$._id') < 10")
---   insert error (key duplication)
--- Schema 
---  getSchema                       | crud_getschema.pcapng            | db = session.getSchema("world_x")
---  getSchema  (create schema)      | mysqlsh_session_getschema.pcapng | mydb = session.getSchema("mydb")
--- Collection
---  create                          | mysqlsh_create_collection.pcapng | mydb.createCollection("products")
---  get                             | mysqlsh_get_collection.pcapng    | mydb.getCollection("products")
--- Connection
---  Open
---  Close
--- JSON
---  find
---  insert
---  update
--- Function
---  sum
--- Pipeline
+--   insert (out of range)       TODO
+--  Management                   | -                                | - 
+--   show schemas                | sql_show_schemas.pcapng          |
+--   use world_x                 | sql_use_world_x.pcapng           |
+-- CRUD                          | -                                | -
+--  Read                         | crud_find_01.pcapng              | db.countryinfo.find().limit(1)
+--                               | crud_find_02.pcapng              | db.countryinfo.find('$.Name = "Aruba"')
+--                               | crud_find_03.pcapng              | db.countryinfo.find('$.geography.Continent = "North America"').fields("count('$._id') as count")
+--                               | crud_find_04.pcapng              | db.countryinfo.find().fields(["$.geography.Continent as continent", "count('$._id') as count"]).groupBy('$.geography.Continent')
+--                               | crud_find_05.pcapng              | db.countryinfo.find('$.geography.Continent = :param1').fields("count('$._id') as count").bind('param1', 'North America') 
+--  Create                       | crud_insert_01.pcapng            | products.add ({" name":"bananas ", " color":"yellow "}).execute(); 
+--                               | crud_insert_02.pcapng            | products.add ([{"x":1},{"x":2}]).execute();
+--  Update                       | crud_update_01.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").set("color", "red")
+--                               | crud_update_02.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").set("price", 1000)
+--                               | crud_update_03.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").unset("price")
+--                               | crud_update_04.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").set("$.quality", ['c','d'])
+--                               | crud_update_05.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").arrayInsert("$.quality[1]", 'b')
+--                               | crud_update_06.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").arrayDelete("$.quality[0]")
+--  Delete                       | crud_delete_01.pcapng            | products.remove("$._id = '5e76990f3ae6e711938388d17dfe8291'") 
+--  error                        | -                                | -
+--   select error                | curd_error_find_01.pcapng        | db.countryinfo.find().fields(["$.geography.Continent as continent"]).groupBy('$.geography.Continent').having("count('$._id') < 10")
+-- Schema                        | -                                | -
+--  getSchema                    | crud_getschema.pcapng            | db = session.getSchema("world_x")
+--  getSchema  (create )         | mysqlsh_session_getschema.pcapng | mydb = session.getSchema("mydb")
+-- Collection                    | -                                | -
+--  create                       | mysqlsh_create_collection.pcapng | mydb.createCollection("products")
+--  get                          | mysqlsh_get_collection.pcapng    | mydb.getCollection("products")
+-- Connection                    | -                                | -
+--  Open                         | mysqlsh_session_open.pcapng      | mysqlx.getNodeSession({'host':'localhost', 'port':8000, 'dbUser':'root', 'dbPassword':'root'})
+--  Close                        | mysqlsh_session_close.pcapng     | session.close()
+-- Index                         | -                                | -
+--  create                       | mysqlsh_create_index_01.pcapng   | products.createIndex("my_index").field("$.name", "text(30)", false).execute()
+--  delete                       | mysqlsh_delete_index.pcapng      | products.dropIndex("my_index").execute()
+-- Pipeline                      TODO
 
 -- info(string.format("pos=%d, len=%d " , l_pos, len))
 -- info(string.format("@@ wire_type=%d, tag_no=%d", wire_type, tag_no))
