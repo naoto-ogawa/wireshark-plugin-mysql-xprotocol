@@ -1,7 +1,6 @@
 -- naminig rule
 -- identifier  -->  word1 .. "_" .. word2
 
--- TODO decode notice
 -- TODO decode column data based on resultset
 
 local xproto = Proto ("XProtocol", "X Protocol Dissector");
@@ -40,13 +39,6 @@ local terminal_type = {
   ,"string"
   ,"bytes"
 }
-
--- -- state between packets -- TODO not good state management, we need to consider each item is divided between packets.
--- local state = {
---     payload_len  = nil
---   , msg_type_num = nil
---   , msg_payload  = nil
--- }
 
 -- mysql_connection.proto
 Capability = {
@@ -671,10 +663,6 @@ function get_size_type_payload (offset, tvb)
       msg_size    = nil
       payload_len = nil
     end
-  -- else 
-    -- msg_size    = nil
-    -- payload_len = state.payload_len 
-  -- end
   -- type
   local msg_type
   local msg_type_num
@@ -687,13 +675,8 @@ function get_size_type_payload (offset, tvb)
       msg_type     = nil 
       msg_type_num = nil 
     end
-  --  else
-  --   msg_type     = nil 
-  --  msg_type_num = state.msg_type_num
-  -- end
   -- payload
   local msg_payload 
-  -- if (offset + payload_len <= tvb:len()) and state.payload == nil then 
   if (offset + payload_len <= tvb:len()) then 
     msg_payload = tvb(offset, payload_len) 
   else
@@ -813,39 +796,6 @@ end
 function decode_bool(v)
   return v == 0 and "FALSE" or "TRUE"
 end
-
----- state management
---function init_state()
---  state.payload_len  = nil
---  state.msg_type_num = nil
---  state.msg_payload  = nil
---end
---
--- function update_state(msg_size, payload_len, msg_type, msg_type_num, msg_payload)
--- 
---   if msg_size ~= nil and msg_type ~= nil and msg_payload ~= nil then
---     init_state()
---     return
---   end 
--- 
---   if msg_size ~= nil and msg_type ~= nil and msg_payload == nil then
---     state.payload_len  = payload_len 
---     state.msg_type_num = msg_type_num
---     state.msg_payload  = nil
---     return
---   end 
---   
---   if msg_size ~= nil and msg_type == nil and msg_payload == nil then
---     state.payload_len  = payload_len 
---     state.msg_type_num = nil
---     state.msg_payload  = nil
---     return
---   end 
--- 
---   -- TODO error message
---   init_state()
--- 
--- end
 
 function make_proto_field_varint(parent_tree, pos, tvb, wire_type, tag_no, msg)
   local val, acc, po, read_size = get_length_val(pos, tvb)
