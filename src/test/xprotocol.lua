@@ -2,7 +2,7 @@
 -- identifier  -->  word1 .. "_" .. word2
 
 -- TODO decode notice
--- TODO decode float
+-- TODO decode column data based on resultset
 
 local xproto = Proto ("XProtocol", "X Protocol Dissector");
 
@@ -341,6 +341,11 @@ Array = {
   [1] = {attr = "repeated" , type = "Expr" , name="value" , tag = 1}
 }
 -- mysqlx_notice.proto
+FrameType = {
+  [1] = {type = "Warning"                 , name="notice"  }
+ ,[2] = {type = "SessionVariableChanged"  , name="notice"  }
+ ,[3] = {type = "SessionStateChanged"     , name="notice"  }
+} 
 Frame = {
   Scope = {
     [1] = "GLOBAL"
@@ -350,8 +355,22 @@ Frame = {
  ,[2] = {attr = "optional" , type = "Scope"  , name="scope"   , tag = 2}
  ,[3] = {attr = "optional" , type = "bytes"  , name="payload" , tag = 3}
  ,enum_fun = function(v) return Frame.Scope[v] end
+ ,type_fun = function(v) 
+    local t = FrameType[v].type 
+    Frame[3].type = t
+    Frame[3].protofield_back = FrameType[v].protofield
+    Frame[3].protofield = FrameType[v].protofield
+    return t 
+  end
+ ,to_bytes = function() 
+    Frame[3].type="bytes"
+    Frame[3].protofield = Frame[3].protofield_back
+    Frame[3].protofield_back = nil
+  end
 }
 Frame[2].converter = Frame.enum_fun
+Frame[1].type_fun  = Frame.type_fun
+Frame[3].clear     = Frame.to_bytes
 Warning = {
   Level = {
     [1] = "NOTE"
@@ -385,6 +404,7 @@ SessionStateChanged = {
  ,[2] = {attr = "optional" , type = "Scalar"    , name="value" , tag = 2}
  ,enum_fun = function(v) return SessionStateChanged.Parameter[v] end
 }
+SessionStateChanged[1].converter = SessionStateChanged.enum_fun
 -- mysqlx_resultset.proto
 FetchDoneMoreOutParams = {
 }
@@ -541,6 +561,7 @@ message_table = {
  , Object                  = Object
  , ObjectField             = ObjectField
  , Array                   = Array
+ , FrameType               = FrameType
  , Frame                   = Frame
  , Warning                 = Warning
  , SessionVariableChanged  = SessionVariableChanged
@@ -833,6 +854,8 @@ function make_proto_field_varint(parent_tree, pos, tvb, wire_type, tag_no, msg)
   -- TODO check type of a value.
   if msg[tag_no].converter          then  -- enum
     val = msg[tag_no].converter(acc) 
+  elseif msg[tag_no].type_fun       then
+    val = msg[tag_no].type_fun(acc)
   elseif msg[tag_no].type == "bool" then
     val = decode_bool(val)
   end
@@ -867,7 +890,10 @@ function make_proto_length_delimited(parent_tree, pos, tvb, wire_type, tag_no, m
     pos = pos + acc
     local next_msg = message_table[msg[tag_no].type]
     local next_subtree = parent_tree:add(msg[tag_no].protofield, next_tvb)
-    process_tree(next_tvb, next_msg, next_subtree, acc) 
+    process_tree(next_tvb, next_msg, next_subtree) 
+    if msg[tag_no].clear then
+      msg[tag_no].clear()
+    end
   end
   return pos - pos_start
 end
