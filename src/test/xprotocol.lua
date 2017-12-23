@@ -6,7 +6,6 @@
 local xproto = Proto ("XProtocol", "X Protocol Dissector");
 
 function xproto.init () 
-  -- init_state()
 end
 
 -- Preferences
@@ -804,7 +803,7 @@ function make_proto_field_varint(parent_tree, pos, tvb, wire_type, tag_no, msg)
   -- TODO check type of a value.
   if msg[tag_no].converter          then  -- enum
     val = msg[tag_no].converter(acc) 
-  elseif msg[tag_no].type_fun       then
+  elseif msg[tag_no].type_fun       then  -- dynamic type change.
     val = msg[tag_no].type_fun(acc)
   elseif msg[tag_no].type == "bool" then
     val = decode_bool(val)
@@ -1013,6 +1012,4 @@ end
 -- 40 0100 0000 wire=0, tag=8       
 -- 0f -> 15
 --
--- 
--- 
 
