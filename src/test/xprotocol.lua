@@ -243,7 +243,13 @@ DropView = {
 }
 -- mysqlx_expect.proto
 Condition = {
-  ConditionOperation = {
+  ConditionKey = {
+     [1] = "no_error"
+    ,[2] = "schema_version"
+    ,[3] = "gtid_executed_contains"
+    ,[4] = "gtid_wait_less_than_ms" 
+  }
+  , ConditionOperation = {
     [0] = "EXPECT_OP_SET"
    ,[1] = "EXPECT_OP_UNSET"
   }
@@ -251,7 +257,9 @@ Condition = {
   , [2] = {attr = "optional", type = "bytes",              name="condition_value", tag = 2}
   , [3] = {attr = "optional", type = "ConditionOperation", name="op",              tag = 3}
   ,enum_fun = function(v) return Condition.ConditionOperation[v] end
+  ,key_fun  = function(v) return Condition.ConditionKey[v] end
 }
+Condition[1].converter = Condition.key_fun 
 Condition[3].converter = Condition.enum_fun 
 ExpectOpen = {
   CtxOperation = {
@@ -260,7 +268,7 @@ ExpectOpen = {
   }
  ,[1] = {attr = "optional" , type = "CtxOperation" , name="op"   , tag = 1}
  ,[2] = {attr = "repeated" , type = "Condition"    , name="cond" , tag = 2}
- ,enum_fun = function(v) return Open.CtxOperation[v] end
+ ,enum_fun = function(v) return ExpectOpen.CtxOperation[v] end
 }
 ExpectOpen[1].converter = ExpectOpen.enum_fun
 ExpectClose = {
@@ -540,9 +548,9 @@ message_table = {
  , CreateView              = CreateView
  , ModifyView              = ModifyView
  , DropView                = DropView
- , Open                    = Open
  , Condition               = Condition
- , Close                   = Close
+ , ExpectOpen              = ExpectOpen
+ , ExpectClose             = ExpectClose
  , Expr                    = Expr
  , Identifier              = Identifier
  , DocumentPathItem        = DocumentPathItem
@@ -710,6 +718,8 @@ function xproto.dissector(tvb, pinfo, tree) -- tvb = testy vertual tvbfer
   local offset = 0
   local msg_size, payload_len, msg_type, msg_type_num, msg_payload
 
+  local msg_list = {}
+
   while offset < tvb:len() do
     local messages = subtree:add (f.message, tvb(offset,5)) -- first 5 bytes (usually size and type) 
 
@@ -728,7 +738,9 @@ function xproto.dissector(tvb, pinfo, tree) -- tvb = testy vertual tvbfer
         :append_text (string.format(" msg_len (%d) : payload_len (%d)", payload_len+1, payload_len))
     end
     if msg_type then
-      messages :append_text ("  " .. get_message_name(direction, msg_type_num))
+      local msg_name = get_message_name(direction, msg_type_num)
+      table.insert(msg_list, msg_name)
+      messages :append_text ("  " .. msg_name)
       messages 
         :add (f.tipe, msg_type) 
         :append_text (string.format(" (%d) ", msg_type_num))
@@ -743,8 +755,8 @@ function xproto.dissector(tvb, pinfo, tree) -- tvb = testy vertual tvbfer
         process_tree(msg_payload, next_msg, payload)
       end
     end
-    -- 
-    -- update_state(msg_size, payload_len, msg_type, msg_type_num, msg_payload)
+    -- https://stackoverflow.com/questions/6589617/lua-convert-a-table-into-a-comma-separated-list
+    pinfo.columns.info = table.concat(msg_list, ",")
   end
 end
 
@@ -796,6 +808,20 @@ function decode_bool(v)
   return v == 0 and "FALSE" or "TRUE"
 end
 
+local fmt_field_variant_debug           = "[(%1$d)] wiret_type (%2$d), tag_no (%3$d) value (%4$s) acc (%5$d)"
+local fmt_length_delimited_nodata_debug = "[(%1$d)] wiret_type (%2$d), tag_no (%3$d) length (%4$d) acc(%5$d)"
+local fmt_length_delimited_debug        = "[(%1$d)] wiret_type (%2$d), tag_no (%3$d) length (%4$d) acc(%5$d) value (%5$s)"
+local fmt_field_variant                 = "wire,tag=[%2$d,%3$d], value (%4$s)"
+local fmt_length_delimited_nodata       = "wire,tag=[%2$d,%3$d], length (%5$d)"
+local fmt_length_delimited              = "wire,tag=[%2$d,%3$d], length (%5$d) value (%6$s)"
+
+-- https://stackoverflow.com/questions/20318698/is-there-a-way-to-specify-the-argument-positions-in-the-format-string-for-strin
+local function reorder(fmt, ...)
+    local args, order = {...}, {}
+    fmt = fmt:gsub('%%(%d+)%$', function(i) table.insert(order, args[tonumber(i)]) return '%' end)
+    return string.format(fmt, table.unpack(order))
+end
+
 function make_proto_field_varint(parent_tree, pos, tvb, wire_type, tag_no, msg)
   local val, acc, po, read_size = get_length_val(pos, tvb)
   pos = pos + read_size
@@ -808,7 +834,7 @@ function make_proto_field_varint(parent_tree, pos, tvb, wire_type, tag_no, msg)
   elseif msg[tag_no].type == "bool" then
     val = decode_bool(val)
   end
-  item :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) value (%s) acc (%d)", po, wire_type, tag_no, tostring(val), acc))
+  item :add (reorder(fmt_field_variant , po, wire_type, tag_no, tostring(val), acc))
   return read_size 
 end
 
@@ -822,16 +848,14 @@ function make_proto_length_delimited(parent_tree, pos, tvb, wire_type, tag_no, m
     if acc == 0 then
       parent_tree
         :add(msg[tag_no].protofield)
-        :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d)"
-                      , po, wire_type, tag_no, le, acc))
+        :add (reorder(fmt_length_delimited_nodata , po, wire_type, tag_no, le, acc, va))
     else
       local next_tvb = tvb(pos, acc)
       local va = tvb(pos, acc) : string()
       pos = pos + acc
       parent_tree
         :add(msg[tag_no].protofield, next_tvb)
-        :add (string.format("[(%d)] wiret_type (%d), tag_no (%d) length (%d) acc(%d) value (%s)"
-                      , po, wire_type, tag_no, le, acc, va))
+        :add (reorder(fmt_length_delimited , po, wire_type, tag_no, le, acc, va))
      end
   else 
     -- recursive
@@ -871,57 +895,59 @@ function process_tree(tvb, msg, subtree)
   end
 end
 
--- packet test data              | capture file                     | statement
--- -------------------------------------------------------------------------------------------------------------
--- login falirue                 | mysqlsh_password_invalid.pcapng  |
--- SQL                           | -                                | -
---  Select                       | sql_select_01.pcapng             | select * from country limit 1;
---                               | sql_select_02.pcapng             | select * from  countrylanguage limit 1;
---  Insert                       | sql_insert.pcapng                | insert into foo(id,v) values(123, 'abc');
---  Update                       | sql_update.pcapng                | update foo set v='xyz' where id=123;
---  Delete                       | sql_delete.pcapng                | delete from foo;
---   SQL syntacs error           | sql_syntax_error.pcapng          | updat foo set v='xyz' where id=123;
---   select error (table)        | sql_select_error.pcapng          | select * from country__ limit 1;
---   insert error (duplication)  | sql_insert_duplicate_key.pcapng  | insert into bazz values(1);
---  warnning
---   insert (out of range)       TODO
---  Management                   | -                                | - 
---   show schemas                | sql_show_schemas.pcapng          |
---   use world_x                 | sql_use_world_x.pcapng           |
--- CRUD                          | -                                | -
---  Read                         | crud_find_01.pcapng              | db.countryinfo.find().limit(1)
---                               | crud_find_02.pcapng              | db.countryinfo.find('$.Name = "Aruba"')
---                               | crud_find_03.pcapng              | db.countryinfo.find('$.geography.Continent = "North America"').fields("count('$._id') as count")
---                               | crud_find_04.pcapng              | db.countryinfo.find().fields(["$.geography.Continent as continent", "count('$._id') as count"]).groupBy('$.geography.Continent')
---                               | crud_find_05.pcapng              | db.countryinfo.find('$.geography.Continent = :param1').fields("count('$._id') as count").bind('param1', 'North America') 
---  Create                       | crud_insert_01.pcapng            | products.add ({" name":"bananas ", " color":"yellow "}).execute(); 
---                               | crud_insert_02.pcapng            | products.add ([{"x":1},{"x":2}]).execute();
---  Update                       | crud_update_01.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").set("color", "red")
---                               | crud_update_02.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").set("price", 1000)
---                               | crud_update_03.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").unset("price")
---                               | crud_update_04.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").set("$.quality", ['c','d'])
---                               | crud_update_05.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").arrayInsert("$.quality[1]", 'b')
---                               | crud_update_06.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").arrayDelete("$.quality[0]")
---  Delete                       | crud_delete_01.pcapng            | products.remove("$._id = '5e76990f3ae6e711938388d17dfe8291'") 
---  error                        | -                                | -
---   select error                | curd_error_find_01.pcapng        | db.countryinfo.find().fields(["$.geography.Continent as continent"]).groupBy('$.geography.Continent').having("count('$._id') < 10")
--- Schema                        | -                                | -
---  getSchema                    | crud_getschema.pcapng            | db = session.getSchema("world_x")
---  getSchema  (create )         | mysqlsh_session_getschema.pcapng | mydb = session.getSchema("mydb")
--- Collection                    | -                                | -
---  create                       | mysqlsh_create_collection.pcapng | mydb.createCollection("products")
---  get                          | mysqlsh_get_collection.pcapng    | mydb.getCollection("products")
--- Connection                    | -                                | -
---  Open                         | mysqlsh_session_open.pcapng      | mysqlx.getNodeSession({'host':'localhost', 'port':8000, 'dbUser':'root', 'dbPassword':'root'})
---  Close                        | mysqlsh_session_close.pcapng     | session.close()
--- Index                         | -                                | -
---  create                       | mysqlsh_create_index_01.pcapng   | products.createIndex("my_index").field("$.name", "text(30)", false).execute()
---  delete                       | mysqlsh_delete_index.pcapng      | products.dropIndex("my_index").execute()
--- Pipeline                      TODO
-
--- info(string.format("pos=%d, len=%d " , l_pos, len))
--- info(string.format("@@ wire_type=%d, tag_no=%d", wire_type, tag_no))
-
+--[[
+packet test data              | capture file                     | statement
+-------------------------------------------------------------------------------------------------------------
+login falirue                 | mysqlsh_password_invalid.pcapng  |
+SQL                           | -                                | -
+ Select                       | sql_select_01.pcapng             | select * from country limit 1;
+                              | sql_select_02.pcapng             | select * from  countrylanguage limit 1;
+ Insert                       | sql_insert.pcapng                | insert into foo(id,v) values(123, 'abc');
+ Update                       | sql_update.pcapng                | update foo set v='xyz' where id=123;
+ Delete                       | sql_delete.pcapng                | delete from foo;
+  SQL syntacs error           | sql_syntax_error.pcapng          | updat foo set v='xyz' where id=123;
+  select error (table)        | sql_select_error.pcapng          | select * from country__ limit 1;
+  insert error (duplication)  | sql_insert_duplicate_key.pcapng  | insert into bazz values(1);
+ warnning
+  insert (out of range)       TODO
+ Management                   | -                                | - 
+  show schemas                | sql_show_schemas.pcapng          |
+  use world_x                 | sql_use_world_x.pcapng           |
+CRUD                          | -                                | -
+ Read                         | crud_find_01.pcapng              | db.countryinfo.find().limit(1)
+                              | crud_find_02.pcapng              | db.countryinfo.find('$.Name = "Aruba"')
+                              | crud_find_03.pcapng              | db.countryinfo.find('$.geography.Continent = "North America"').fields("count('$._id') as count")
+                              | crud_find_04.pcapng              | db.countryinfo.find().fields(["$.geography.Continent as continent", "count('$._id') as count"]).groupBy('$.geography.Continent')
+                              | crud_find_05.pcapng              | db.countryinfo.find('$.geography.Continent = :param1').fields("count('$._id') as count").bind('param1', 'North America') 
+ Create                       | crud_insert_01.pcapng            | products.add ({" name":"bananas ", " color":"yellow "}).execute(); 
+                              | crud_insert_02.pcapng            | products.add ([{"x":1},{"x":2}]).execute();
+ Update                       | crud_update_01.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").set("color", "red")
+                              | crud_update_02.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").set("price", 1000)
+                              | crud_update_03.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").unset("price")
+                              | crud_update_04.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").set("$.quality", ['c','d'])
+                              | crud_update_05.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").arrayInsert("$.quality[1]", 'b')
+                              | crud_update_06.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").arrayDelete("$.quality[0]")
+ Delete                       | crud_delete_01.pcapng            | products.remove("$._id = '5e76990f3ae6e711938388d17dfe8291'") 
+ error                        | -                                | -
+  select error                | curd_error_find_01.pcapng        | db.countryinfo.find().fields(["$.geography.Continent as continent"]).groupBy('$.geography.Continent').having("count('$._id') < 10")
+Schema                        | -                                | -
+ getSchema                    | crud_getschema.pcapng            | db = session.getSchema("world_x")
+ getSchema  (create )         | mysqlsh_session_getschema.pcapng | mydb = session.getSchema("mydb")
+Collection                    | -                                | -
+ create                       | mysqlsh_create_collection.pcapng | mydb.createCollection("products")
+ get                          | mysqlsh_get_collection.pcapng    | mydb.getCollection("products")
+Connection                    | -                                | -
+ Open                         | mysqlsh_session_open.pcapng      | mysqlx.getNodeSession({'host':'localhost', 'port':8000, 'dbUser':'root', 'dbPassword':'root'})
+ Close                        | mysqlsh_session_close.pcapng     | session.close()
+Index                         | -                                | -
+ create                       | mysqlsh_create_index_01.pcapng   | products.createIndex("my_index").field("$.name", "text(30)", false).execute()
+ delete                       | mysqlsh_delete_index.pcapng      | products.dropIndex("my_index").execute()
+Pipeline                      TODO
+--]]
+--[[
+info(string.format("pos=%d, len=%d " , l_pos, len))
+info(string.format("@@ wire_type=%d, tag_no=%d", wire_type, tag_no))
+--]]
 --
 -- 0a 0000 1010 wire=2, tag=1
 -- cf 1100 1111 
@@ -957,20 +983,20 @@ end
 -- Bit32    = 5
 -- 
 --     0-tag(4)-wire(3)
---
---  08 0000 1000  wire=0, tag=1      
---  12 0001 0010  wire=2, tag=2
---  1a 0001 1010  wire=2, tag=3
---  22 0010 0010  wire=2, tag=4
---  2a 0010 1010  wire=2, tag=5
---  32 0011 0010  wire=2, tag=6
---  3a 0011 1010  wire=2, tag=7
---  40 0100 0000  wire=0, tag=8       
---  48 0100 1000  wire=0, tag=9
---  50 0101 0000  wire=0, tag=10
---  58 0101 1000  wire=0, tag=11
---  60 0110 0000  wire=0, tag=12
---
+--[[
+08 0000 1000  wire=0, tag=1      
+12 0001 0010  wire=2, tag=2
+1a 0001 1010  wire=2, tag=3
+22 0010 0010  wire=2, tag=4
+2a 0010 1010  wire=2, tag=5
+32 0011 0010  wire=2, tag=6
+3a 0011 1010  wire=2, tag=7
+40 0100 0000  wire=0, tag=8       
+48 0100 1000  wire=0, tag=9
+50 0101 0000  wire=0, tag=10
+58 0101 1000  wire=0, tag=11
+60 0110 0000  wire=0, tag=12
+--]]
 --  0a 0000 1010  wire0,  tag=2
 
 --  3f 0011 1111
