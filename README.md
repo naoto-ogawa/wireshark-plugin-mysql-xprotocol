@@ -61,5 +61,5 @@ You should check [Beware the GPL](https://wiki.wireshark.org/Lua/) in the Wiresh
 
 ## Author
 
-[naoto-ogawa](https://github.com/naoto-ogaaw)
+[naoto-ogawa](https://github.com/naoto-ogawa)
 
