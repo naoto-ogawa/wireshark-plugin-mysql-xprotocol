@@ -55,7 +55,7 @@ I only tested the plugin with my local MySQL on my local Mac.
 
 GPL
 
-You should heck [Beware the GPL](https://wiki.wireshark.org/Lua/) in the Wireshark Wiki.
+You should check [Beware the GPL](https://wiki.wireshark.org/Lua/) in the Wireshark Wiki.
 
 ## Auther
 
