@@ -3,6 +3,14 @@
 
 -- TODO decode column data based on resultset
 
+local my_info = {
+  version     = "0.0.1",
+  author      = "naoto ogawa",
+  description = "a dissector plugin for MySQL XProtocol",
+  repository  = "https://github.com/naoto-ogawa/wireshark-plugin-mysql-xprotocol"
+}
+set_plugin_info(my_info)
+
 local xproto = Proto ("XProtocol", "X Protocol Dissector");
 
 function xproto.init () 
