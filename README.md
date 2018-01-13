@@ -57,7 +57,7 @@ GPL
 
 You should check [Beware the GPL](https://wiki.wireshark.org/Lua/) in the Wireshark Wiki.
 
-## Auther
+## Author
 
 [naoto-ogawa](https://github.com/naoto-ogaaw)
 
