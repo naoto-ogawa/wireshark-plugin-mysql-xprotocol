@@ -756,7 +756,7 @@ function xproto.dissector(tvb, pinfo, tree) -- tvb = testy vertual tvbfer
       end
     end
     -- https://stackoverflow.com/questions/6589617/lua-convert-a-table-into-a-comma-separated-list
-    pinfo.columns.info = table.concat(msg_list, ",")
+    pinfo.columns.info = (direction and "[S->C] " or "[C->S] ") .. table.concat(msg_list, ",")
   end
 end
 
