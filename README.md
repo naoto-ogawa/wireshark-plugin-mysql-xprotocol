@@ -47,6 +47,8 @@ A dissector plugin for MySQL XProtocol
 
 You can find a lot of example packets in the data directory.
 
+[Blog Post : Looking into the details of XProtocol Pipelining](http://naotoogawa.hatenablog.jp/entry/2017/12/25/MySQL_Xmas_Xprotocol) (in Japanese)
+
 ## Test 
 
 I only tested the plugin with my local MySQL on my local Mac. 
