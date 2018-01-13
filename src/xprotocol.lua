@@ -1,15 +1,23 @@
--- naminig rule
--- identifier  -->  word1 .. "_" .. word2
+--[[
+Module      : xprotocol.lua
+Description : Wireshark plugin for MySQL XProtocol 
+Copyright   : (c) Naoto Ogawa, 2018
+License     : GPL
+Maintainer  : becausethespiderspiedher+wiresharkxprotocol(at)email.com
+Stability   : experimental
 
--- TODO decode column data based on resultset
+Reference XProtocol 
+ https://dev.mysql.com/doc/internals/en/x-protocol.html
 
-local my_info = {
+--]]
+
+local xproto_info = {
   version     = "0.0.1",
   author      = "naoto ogawa",
   description = "a dissector plugin for MySQL XProtocol",
   repository  = "https://github.com/naoto-ogawa/wireshark-plugin-mysql-xprotocol"
 }
-set_plugin_info(my_info)
+set_plugin_info(xproto_info)
 
 local xproto = Proto ("XProtocol", "X Protocol Dissector");
 
@@ -507,7 +515,7 @@ servermessagetype = {
   , [12] = {name = "RESULTSET_COLUMN_META_DATA",           type = "ColumnMetaData",           }
   , [13] = {name = "RESULTSET_ROW",                        type = "Row",                      }
   , [14] = {name = "RESULTSET_FETCH_DONE",                 type = "FetchDone",                }
-  , [15] = {name = "RESULTSET_FETCH_SUSPENDED",            type = "nil",                      } -- TODO
+  , [15] = {name = "RESULTSET_FETCH_SUSPENDED",            type = "nil",                      } -- TODO, I haven't understand yet.
   , [16] = {name = "RESULTSET_FETCH_DONE_MORE_RESULTSETS", type = "FetchDoneMoreResultsets",  }
   , [17] = {name = "SQL_STMT_EXECUTE_OK",                  type = "StmtExecuteOk",            }
   , [18] = {name = "RESULTSET_FETCH_DONE_MORE_OUT_PARAMS", type = "FetchDoneMoreOutParams",   }
@@ -903,7 +911,13 @@ function process_tree(tvb, msg, subtree)
   end
 end
 
---[[
+--[[ What to do
+
+TODO decode column data based on resultset
+--]]
+
+--[[ sample packets
+
 packet test data              | capture file                     | statement
 -------------------------------------------------------------------------------------------------------------
 login falirue                 | mysqlsh_password_invalid.pcapng  |
@@ -950,49 +964,23 @@ Connection                    | -                                | -
 Index                         | -                                | -
  create                       | mysqlsh_create_index_01.pcapng   | products.createIndex("my_index").field("$.name", "text(30)", false).execute()
  delete                       | mysqlsh_delete_index.pcapng      | products.dropIndex("my_index").execute()
-Pipeline                      TODO
+Pipeline                      | pipeline_open.pcapng                               |
+                              | pipeline_5_inserts_3rd_failure_nomal.pcapng        |
+                              | pipeline_5_inserts_3rd_failure_nomal1.pcapng       |
+                              | pipeline_5_inserts_3rd_failure_no_error.pcapng     |
+                              | pipeline_5_inserts_3rd_failure_no_errori1.pcapng   |
 --]]
---[[
+
+--[[ just for debug
+
 info(string.format("pos=%d, len=%d " , l_pos, len))
 info(string.format("@@ wire_type=%d, tag_no=%d", wire_type, tag_no))
 --]]
---
--- 0a 0000 1010 wire=2, tag=1
--- cf 1100 1111 
--- 02 0000 0010  -> 10 1001111
 
--- 0000   0a cf 02 7b 22 47 4e 50 22 3a 20 38 32 38 2c 20
---        
--- 0010   22 5f 69 64 22 3a 20 22 41 42 57 22 2c 20 22 4e
--- 0020   61 6d 65 22 3a 20 22 41 72 75 62 61 22 2c 20 22
--- 0030   49 6e 64 65 70 59 65 61 72 22 3a 20 6e 75 6c 6c
--- 0040   2c 20 22 67 65 6f 67 72 61 70 68 79 22 3a 20 7b
--- 0050   22 52 65 67 69 6f 6e 22 3a 20 22 43 61 72 69 62
--- 0060   62 65 61 6e 22 2c 20 22 43 6f 6e 74 69 6e 65 6e
--- 0070   74 22 3a 20 22 4e 6f 72 74 68 20 41 6d 65 72 69
--- 0080   63 61 22 2c 20 22 53 75 72 66 61 63 65 41 72 65
--- 0090   61 22 3a 20 31 39 33 7d 2c 20 22 67 6f 76 65 72
--- 00a0   6e 6d 65 6e 74 22 3a 20 7b 22 48 65 61 64 4f 66
--- 00b0   53 74 61 74 65 22 3a 20 22 42 65 61 74 72 69 78
--- 00c0   22 2c 20 22 47 6f 76 65 72 6e 6d 65 6e 74 46 6f
--- 00d0   72 6d 22 3a 20 22 4e 6f 6e 6d 65 74 72 6f 70 6f
--- 00e0   6c 69 74 61 6e 20 54 65 72 72 69 74 6f 72 79 20
--- 00f0   6f 66 20 54 68 65 20 4e 65 74 68 65 72 6c 61 6e
--- 0100   64 73 22 7d 2c 20 22 64 65 6d 6f 67 72 61 70 68
--- 0110   69 63 73 22 3a 20 7b 22 50 6f 70 75 6c 61 74 69
--- 0120   6f 6e 22 3a 20 31 30 33 30 30 30 2c 20 22 4c 69
--- 0130   66 65 45 78 70 65 63 74 61 6e 63 79 22 3a 20 37
--- 0140   38 2e 34 30 30 30 30 31 35 32 35 38 37 38 39 7d
--- 0150   7d 00
+--[[ reference for reading binary of protocol buffer. 
 
--- VarInt   = 0
--- Bit64    = 1
--- LenDelim = 2
--- Bit32    = 5
--- 
---     0-tag(4)-wire(3)
---[[
 08 0000 1000  wire=0, tag=1      
+0a 0000 1010  wire=2, tag=1
 12 0001 0010  wire=2, tag=2
 1a 0001 1010  wire=2, tag=3
 22 0010 0010  wire=2, tag=4
@@ -1005,45 +993,36 @@ info(string.format("@@ wire_type=%d, tag_no=%d", wire_type, tag_no))
 58 0101 1000  wire=0, tag=11
 60 0110 0000  wire=0, tag=12
 --]]
---  0a 0000 1010  wire0,  tag=2
 
---  3f 0011 1111
---
---  ff ff ff ff 0f = 11111111 11111111 11111111 11111111 00001111
---                   0000 0000 1111 1111 1111 1111 1111 1111 1111 1111 
--- 
--- 0000  08 07 12 03 64 6f 63 1a  03 64 6f 63 22 0b 63 6f   ....doc. .doc".co
---       **    **             **  ~~          ** ~~
--- 0010  75 6e 74 72 79 69 6e 66  6f 2a 0b 63 6f 75 6e 74   untryinf o*.count
---                                   ** ~~             
--- 0020  72 79 69 6e 66 6f 32 07  77 6f 72 6c 64 5f 78 3a   ryinfo2. world_x:
---                         ** ~~                       **
--- 0030  03 64 65 66 40 3f 48 00  50 ff ff ff ff 0f 58 00   .def@?H. P.....X.
---       ~~          **    **     **                **
--- 0040  60 02  
---       ** 
+--[[ a manual decoding example
 
--- [S-C] a Capability of Capabilities
---
--- Capabilities
---
--- +Capability w2 
--- |      
--- |     +string        +Any w2
--- |     |              | 
--- |     |              |     +Type +Scalar w2
--- |     |              |     |     |     
--- |     |              |     |     |     +Type 
--- |     |              |     |     |     |      
--- |     |              |     |     |     |      +bool w2
--- |     |              |     |     |     |      |
--- 0a 0f 0a 03 74 6c 73 12 08 08 01 12 04 08 07 40 00
--- ** ~~ ** ~~          ** ~~ **    ** ~~ **    **
---
--- 0a 0000 1010 wire=2, tag=1
--- 12 0001 0010 wire=2, tag=2
--- 08 0000 1000 wire=0, tag=1      
--- 40 0100 0000 wire=0, tag=8       
--- 0f -> 15
---
+0000  08 07 12 03 64 6f 63 1a  03 64 6f 63 22 0b 63 6f   ....doc. .doc".co
+      **    **             **  ~~          ** ~~
+0010  75 6e 74 72 79 69 6e 66  6f 2a 0b 63 6f 75 6e 74   untryinf o*.count
+                                  ** ~~             
+0020  72 79 69 6e 66 6f 32 07  77 6f 72 6c 64 5f 78 3a   ryinfo2. world_x:
+                        ** ~~                       **
+0030  03 64 65 66 40 3f 48 00  50 ff ff ff ff 0f 58 00   .def@?H. P.....X.
+      ~~          **    **     **                **
+0040  60 02  
+      ** 
+
+[S-C] a Capability of Capabilities
+
+Capabilities
+
++Capability w2 
+|      
+|     +string        +Any w2
+|     |              | 
+|     |              |     +Type +Scalar w2
+|     |              |     |     |     
+|     |              |     |     |     +Type 
+|     |              |     |     |     |      
+|     |              |     |     |     |      +bool w2
+|     |              |     |     |     |      |
+0a 0f 0a 03 74 6c 73 12 08 08 01 12 04 08 07 40 00
+** ~~ ** ~~          ** ~~ **    ** ~~ **    **
+
+--]]
 
