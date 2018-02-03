@@ -27,6 +27,7 @@ end
 -- Preferences
 local p = xproto.prefs
 p.server_port = Pref.uint ("server port", 8000, "server port number") -- TODO 33060 should be default
+p.show_detail = Pref.bool ("show detail (protocol buffer wire_type and tag_no, etc.)", false, "show detail")
 
 -- Fields
 local f = xproto.fields
@@ -749,18 +750,23 @@ function xproto.dissector(tvb, pinfo, tree) -- tvb = testy vertual tvbfer
     end
 
     if msg_size then
-      messages
-        :add (f.size, msg_size) 
-        :append_text (string.format(" msg_len (%d) : payload_len (%d)", payload_len+1, payload_len))
+      if p.show_detail then
+        messages
+          :add (f.size, msg_size)
+          :append_text (string.format(" msg_len (%d) : payload_len (%d)", payload_len+1, payload_len))
+      end
     end
     if msg_type then
       local msg_name = get_message_name(direction, msg_type_num)
       table.insert(msg_list, msg_name)
       messages :append_text ("  " .. msg_name)
-      messages 
-        :add (f.tipe, msg_type) 
-        :append_text (string.format(" (%d) ", msg_type_num))
-        :append_text (get_message_name(direction, msg_type_num))
+               :append_text (string.format(" msg_len (%d), payload_len (%d)", payload_len+1, payload_len))
+      if p.show_detail then
+         messages
+           :add (f.tipe, msg_type
+           :append_text (string.format(" (%d) ", msg_type_num))
+           :append_text (get_message_name(direction, msg_type_num))
+      end
     end
     if msg_payload then 
       local payload = messages:add (get_message_protofield(direction, msg_type_num), msg_payload) 
@@ -824,12 +830,15 @@ function decode_bool(v)
   return v == 0 and "FALSE" or "TRUE"
 end
 
-local fmt_field_variant_debug           = "[(%1$d)] wiret_type (%2$d), tag_no (%3$d) value (%4$s) acc (%5$d)"
-local fmt_length_delimited_nodata_debug = "[(%1$d)] wiret_type (%2$d), tag_no (%3$d) length (%4$d) acc(%5$d)"
-local fmt_length_delimited_debug        = "[(%1$d)] wiret_type (%2$d), tag_no (%3$d) length (%4$d) acc(%5$d) value (%5$s)"
-local fmt_field_variant                 = "wire,tag=[%2$d,%3$d], value (%4$s)"
-local fmt_length_delimited_nodata       = "wire,tag=[%2$d,%3$d], length (%5$d)"
-local fmt_length_delimited              = "wire,tag=[%2$d,%3$d], length (%5$d) value (%6$s)"
+local fmt_field_variant_debug            = "[(%1$d)] wiret_type (%2$d), tag_no (%3$d) value (%4$s) acc (%5$d)"
+local fmt_length_delimited_nodata_debug  = "[(%1$d)] wiret_type (%2$d), tag_no (%3$d) length (%4$d) acc(%5$d)"
+local fmt_length_delimited_debug         = "[(%1$d)] wiret_type (%2$d), tag_no (%3$d) length (%4$d) acc(%5$d) value (%5$s)"
+local fmt_field_variant_detail           = "wire,tag=[%2$d,%3$d], value (%4$s)"
+local fmt_field_variant                  = ", val (%4$s)"
+local fmt_length_delimited_nodata_detail = "wire,tag=[%2$d,%3$d], length (%5$d)"
+local fmt_length_delimited_nodata        = "no data"
+local fmt_length_delimited_detail        = "wire,tag=[%2$d,%3$d], length (%5$d) value (%6$s)"
+local fmt_length_delimited               = ", val (%6$s)"
 
 -- https://stackoverflow.com/questions/20318698/is-there-a-way-to-specify-the-argument-positions-in-the-format-string-for-strin
 local function reorder(fmt, ...)
@@ -850,7 +859,12 @@ function make_proto_field_varint(parent_tree, pos, tvb, wire_type, tag_no, msg)
   elseif msg[tag_no].type == "bool" then
     val = decode_bool(val)
   end
-  item :add (reorder(fmt_field_variant , po, wire_type, tag_no, tostring(val), acc))
+  if p.show_detail then
+    item :add (reorder(fmt_field_variant_detail , po, wire_type, tag_no, tostring(val), acc))
+  else
+    parent_tree:append_text (reorder(fmt_field_variant , po, wire_type, tag_no, tostring(val), acc))
+  end
+
   return read_size 
 end
 
@@ -862,16 +876,24 @@ function make_proto_length_delimited(parent_tree, pos, tvb, wire_type, tag_no, m
   local type = msg[tag_no].type 
   if is_terminal(type) then
     if acc == 0 then
-      parent_tree
-        :add(msg[tag_no].protofield)
-        :add (reorder(fmt_length_delimited_nodata , po, wire_type, tag_no, le, acc, va))
+      if p.show_detail then
+        parent_tree
+          :add(msg[tag_no].protofield)
+          :add (reorder(fmt_length_delimited_nodata_detal, po, wire_type, tag_no, le, acc, va))
+      else
+        parent_tree :append_text(reorder(fmt_length_delimited_nodata, po, wire_type, tag_no, le, acc, va))
+      end
     else
       local next_tvb = tvb(pos, acc)
       local va = tvb(pos, acc) : string()
       pos = pos + acc
-      parent_tree
-        :add(msg[tag_no].protofield, next_tvb)
-        :add (reorder(fmt_length_delimited , po, wire_type, tag_no, le, acc, va))
+      if p.show_detail then
+         parent_tree
+           :add(msg[tag_no].protofield, next_tvb)
+           :add (reorder(fmt_length_delimited_detail , po, wire_type, tag_no, le, acc, va))
+      else
+        parent_tree :append_text(reorder(fmt_length_delimited , po, wire_type, tag_no, le, acc, va))
+      end
      end
   else 
     -- recursive
