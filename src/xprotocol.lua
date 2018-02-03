@@ -763,7 +763,7 @@ function xproto.dissector(tvb, pinfo, tree) -- tvb = testy vertual tvbfer
                :append_text (string.format(" msg_len (%d), payload_len (%d)", payload_len+1, payload_len))
       if p.show_detail then
          messages
-           :add (f.tipe, msg_type
+           :add (f.tipe, msg_type)
            :append_text (string.format(" (%d) ", msg_type_num))
            :append_text (get_message_name(direction, msg_type_num))
       end
