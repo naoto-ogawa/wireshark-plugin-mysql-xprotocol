@@ -787,7 +787,7 @@ DissectorTable.get("tcp.port"):add(p.server_port, xproto)
 -- little ending and 7bit each
 function get_length_val(offset, tvb) 
   offset_start = offset
-  local b = tvb(offset, 1)
+  local b = tvb(offset, 1) -- get one byte
   offset = offset + 1
   local acc, base = get_number(0, 1, b)
   while b:bitfield(0,1) == 1 do
@@ -800,13 +800,14 @@ end
 
 -- @param val value to be analyzed.
 function get_number(acc, base, val) 
+  local acc1 = acc
   for i=7, 1, -1 do                -- ignore MSB
     if val :bitfield(i,1) == 1 then
-      acc = acc + (2^(base-1))
+      acc1 = acc1 + (2^(base-1))
     end
     base = base + 1
   end
-  return acc, base
+  return acc1, base
 end
 
 function get_wire_tag(offset, tvb) 
@@ -852,12 +853,16 @@ function make_proto_field_varint(parent_tree, pos, tvb, wire_type, tag_no, msg)
   pos = pos + read_size
   item = parent_tree:add(msg[tag_no].protofield, tvb(pos - read_size , read_size))
   -- TODO check type of a value.
-  if msg[tag_no].converter          then  -- enum
+  if msg[tag_no].converter            then  -- enum
     val = msg[tag_no].converter(acc) 
-  elseif msg[tag_no].type_fun       then  -- dynamic type change.
+  elseif msg[tag_no].type_fun         then  -- dynamic type change.
     val = msg[tag_no].type_fun(acc)
-  elseif msg[tag_no].type == "bool" then
-    val = decode_bool(val)
+  elseif msg[tag_no].type == "bool"   then
+    val = decode_bool(acc)
+  elseif msg[tag_no].type == "sint64" then
+    val = decode_zigzag(acc)
+  else
+    val = acc -- this type is numeric
   end
   if p.show_detail then
     item :add (reorder(fmt_field_variant_detail , po, wire_type, tag_no, tostring(val), acc))
@@ -1048,3 +1053,14 @@ Capabilities
 
 --]]
 
+--[[
+decode zigzag 
+e834
+1110100000110100
+11101000 00110100
+00110100 11101000 
+0110100 1101000 
+01101001101000 
+6760
+3380
+--]]
