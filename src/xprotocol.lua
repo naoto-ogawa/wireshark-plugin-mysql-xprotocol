@@ -977,6 +977,8 @@ CRUD                          | -                                | -
                               | crud_update_05.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").arrayInsert("$.quality[1]", 'b')
                               | crud_update_06.pcapng            | products.modify("$._id = '5e76990f3ae6e711938388d17dfe8291'").arrayDelete("$.quality[0]")
  Delete                       | crud_delete_01.pcapng            | products.remove("$._id = '5e76990f3ae6e711938388d17dfe8291'") 
+ null                         | null_insert_01.pcapng            | tbl.insert(['id', 'f1']).values(1,null)
+                              | null_select_01.pcapng            | tbl.select(['id', 'f1']).where("f1 is null")
  error                        | -                                | -
   select error                | curd_error_find_01.pcapng        | db.countryinfo.find().fields(["$.geography.Continent as continent"]).groupBy('$.geography.Continent').having("count('$._id') < 10")
 Schema                        | -                                | -
