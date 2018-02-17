@@ -442,6 +442,11 @@ ColumnMetaData = {
    ,[17] = "BIT"
    ,[18] = "DECIMAL"
   }
+ ,contentType = {
+    [1]  = "GEOMETRY"
+   ,[2]  = "JSON"
+   ,[3]  = "XML"
+  }
  ,[1]  = {attr = "required" , type = "FieldType" , name="type"              , tag = 1}
  ,[2]  = {attr = "optional" , type = "bytes"     , name="name"              , tag = 2}
  ,[3]  = {attr = "optional" , type = "bytes"     , name="original_name"     , tag = 3}
@@ -455,8 +460,10 @@ ColumnMetaData = {
  ,[11] = {attr = "optional" , type = "uint32"    , name="flags"             , tag = 11}
  ,[12] = {attr = "optional" , type = "uint32"    , name="content_type"      , tag = 12}
  ,enum_fun = function(v) return ColumnMetaData.FieldType[v] end
+ ,content_fun = function(v) return ColumnMetaData.contentType[v] end
 }
 ColumnMetaData[1].converter = ColumnMetaData.enum_fun 
+ColumnMetaData[12].converter = ColumnMetaData.content_fun 
 Row = {
   [1] = {attr = "repeated" , type = "bytes" , name="field" , tag = 1}
 }
