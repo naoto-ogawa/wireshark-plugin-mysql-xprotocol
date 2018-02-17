@@ -884,7 +884,7 @@ function make_proto_length_delimited(parent_tree, pos, tvb, wire_type, tag_no, m
       if p.show_detail then
         parent_tree
           :add(msg[tag_no].protofield)
-          :add (reorder(fmt_length_delimited_nodata_detal, po, wire_type, tag_no, le, acc, va))
+          :add (reorder(fmt_length_delimited_nodata_detail, po, wire_type, tag_no, le, acc, va))
       else
         parent_tree :append_text(reorder(fmt_length_delimited_nodata, po, wire_type, tag_no, le, acc, va))
       end
