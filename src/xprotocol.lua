@@ -442,6 +442,23 @@ ColumnMetaData = {
    ,[17] = "BIT"
    ,[18] = "DECIMAL"
   }
+-- //   ====== ================
+-- //   value  description
+-- //   ====== ================
+-- //   0x0010 NOT_NULL
+-- //   0x0020 PRIMARY_KEY
+-- //   0x0040 UNIQUE_KEY
+-- //   0x0080 MULTIPLE_KEY
+-- //   0x0100 AUTO_INCREMENT
+-- //   ====== ================
+-- /
+ ,flagsType = {
+    [16]  = "NOT_NULL" -- //   0x0010 NOT_NULL
+   ,[32]  = "PRIMARY_KEY "-- //   0x0020 PRIMARY_KEY
+   ,[64]  = "UNIQUE_KEY" -- //   0x0040 UNIQUE_KEY
+   ,[128] = "MULTIPLE_KEY" -- //   0x0080 MULTIPLE_KEY
+   ,[256] = "AUTO_INCREMENT" -- //   0x0100 AUTO_INCREMENT
+  }
  ,contentType = {
     [1]  = "GEOMETRY"
    ,[2]  = "JSON"
@@ -459,11 +476,19 @@ ColumnMetaData = {
  ,[10] = {attr = "optional" , type = "uint32"    , name="length"            , tag = 10}
  ,[11] = {attr = "optional" , type = "uint32"    , name="flags"             , tag = 11}
  ,[12] = {attr = "optional" , type = "uint32"    , name="content_type"      , tag = 12}
- ,enum_fun = function(v) return ColumnMetaData.FieldType[v] end
+ ,enum_fun    = function(v) return ColumnMetaData.FieldType[v] end
+ ,flags_fun   = function(x)
+                   local ret=""
+                   for k, v in pairs(ColumnMetaData.flagsType) do
+                     if bit32.band(x,k)==k then ret = ret .. " " .. v end
+                   end
+                   return trim(ret)
+                end
  ,content_fun = function(v) return ColumnMetaData.contentType[v] end
 }
-ColumnMetaData[1].converter = ColumnMetaData.enum_fun 
-ColumnMetaData[12].converter = ColumnMetaData.content_fun 
+ColumnMetaData[1 ].converter = ColumnMetaData.enum_fun
+ColumnMetaData[11].converter = ColumnMetaData.flags_fun
+ColumnMetaData[12].converter = ColumnMetaData.content_fun
 Row = {
   [1] = {attr = "repeated" , type = "bytes" , name="field" , tag = 1}
 }
@@ -606,6 +631,11 @@ message_table = {
  , Ok                      = Ok
  , Error                   = Error
 }
+
+-- http://lua-users.org/wiki/CommonFunctions
+function trim(s)
+  return (s:gsub("^%s*(.-)%s*$", "%1"))
+end
 
 function is_num_or_str(v)
   return type(v) == "number" or type(v) == "string"
