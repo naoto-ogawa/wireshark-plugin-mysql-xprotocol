@@ -63,3 +63,10 @@ You should check [Beware the GPL](https://wiki.wireshark.org/Lua/) in the Wiresh
 
 [naoto-ogawa](https://github.com/naoto-ogawa)
 
+## Worklog
+
+* 2018/Feb/22
+  * Add UTF-8 support
+
+      ![A packet including emoji](images/emoji_packet.png?raw=true)
+ 
