@@ -622,6 +622,17 @@ message_table = {
  , Error                   = Error
 }
 
+-- https://stackoverflow.com/a/18694774
+function utf8_from(t)
+  local bytearr = {}
+  for i = 0, t:len()-1 do
+    local v = t:get_index(i)
+    local utf8byte = v < 0 and (0xff + v + 1) or v
+    table.insert(bytearr, string.char(utf8byte))
+  end
+  return table.concat(bytearr)
+end
+
 -- http://lua-users.org/wiki/CommonFunctions
 function trim(s)
   return (s:gsub("^%s*(.-)%s*$", "%1"))
@@ -879,8 +890,9 @@ function make_proto_field_varint(parent_tree, pos, tvb, wire_type, tag_no, msg)
   local val, acc, po, read_size = get_length_val(pos, tvb)
   pos = pos + read_size
   item = parent_tree:add(msg[tag_no].protofield, tvb(pos - read_size , read_size))
+  -- data conversion !!!!!
   -- TODO check type of a value.
-  if msg[tag_no].converter            then  -- enum
+  if msg[tag_no].converter            then
     val = msg[tag_no].converter(acc) 
   elseif msg[tag_no].type_fun         then  -- dynamic type change.
     val = msg[tag_no].type_fun(acc)
@@ -917,7 +929,13 @@ function make_proto_length_delimited(parent_tree, pos, tvb, wire_type, tag_no, m
       end
     else
       local next_tvb = tvb(pos, acc)
-      local va = tvb(pos, acc) : string()
+      -- data conversion !!!!!
+      local va
+      if getmetatable(msg).name == "String" then
+        va = utf8_from(tvb(pos, acc) : bytes())
+      else
+        va = tvb(pos, acc) : string()
+      end
       pos = pos + acc
       if p.show_detail then
          parent_tree
